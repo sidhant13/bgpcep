@@ -3,7 +3,7 @@ module bgp-message {
     namespace "urn:opendaylight:params:xml:ns:yang:bgp-message";
     prefix "bgp-msg";
 
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
     import bgp-types { prefix bgp-t; revision-date 2013-09-19; }
     import network-concepts { prefix netc; revision-date 2013-11-25; }
 
@@ -35,6 +35,21 @@ module bgp-message {
     typedef protocol-version {
         type uint8 {
             range 1..7;
+        }
+    }
+
+    typedef path-id {
+        type uint32;
+        default 0;
+        description
+            "Identifier of a single path. The identifier does not
+             carry any semantic meaning beyond uniquely identifying
+             a path.";
+    }
+
+    grouping path-id-grouping {
+        leaf path-id {
+            type path-id;
         }
     }
 
@@ -83,6 +98,10 @@ module bgp-message {
                         leaf as-number {
                             type inet:as-number;
                         }
+                    }
+                    container bgp-extended-message-capability {
+                        reference "https://www.ietf.org/archive/id/draft-ietf-idr-bgp-extended-messages-11.txt";
+                        presence "Indicates peer is able to send/receive 64K messages";
                     }
                 }
             }
@@ -144,17 +163,6 @@ module bgp-message {
                     }
                 }
             }
-            container qos{
-                container qos-stlv{
-                    leaf type{
-                        type uint8;
-                    }
-                    leaf-list metric{
-                        type string;
-                    }
-                }
-            }
-
             list unrecognized-attributes {
                 key type;
                 leaf partial {
@@ -174,6 +182,14 @@ module bgp-message {
                         length 0..65535;
                     }
                     mandatory true;
+                }
+            }
+            container bgp-prefix-sid {
+                list bgp-prefix-sid-tlvs {
+                    choice bgp-prefix-sid-tlv {
+                        reference "https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-02";
+                        // to be augmented
+                    }
                 }
             }
         }

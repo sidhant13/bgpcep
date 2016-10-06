@@ -7,29 +7,29 @@
  */
 package org.opendaylight.controller.config.yang.bgp.rib.impl;
 
-import com.google.common.base.Optional;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeChangeService;
-import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeIdentifier;
-import org.opendaylight.protocol.bgp.openconfig.spi.BGPConfigModuleTracker;
-import org.opendaylight.protocol.bgp.openconfig.spi.BGPOpenConfigProvider;
-import org.opendaylight.protocol.bgp.openconfig.spi.BGPOpenconfigMapper;
-import org.opendaylight.protocol.bgp.openconfig.spi.InstanceConfigurationIdentifier;
-import org.opendaylight.protocol.bgp.openconfig.spi.pojo.BGPAppPeerInstanceConfiguration;
-import org.opendaylight.protocol.bgp.rib.impl.ApplicationPeer;
-import org.opendaylight.protocol.bgp.rib.impl.RIBImpl;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.ApplicationRib;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.Tables;
-import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.common.QName;
-import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
+import org.opendaylight.controller.config.api.osgi.WaitingServiceTracker;
+import org.opendaylight.protocol.bgp.rib.impl.spi.BgpDeployer;
+import org.opendaylight.protocol.bgp.rib.impl.spi.RIB;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.bgp.rev151009.bgp.neighbors.Neighbor;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.bgp.rev151009.bgp.neighbors.NeighborKey;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.bgp.rev151009.bgp.top.Bgp;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.bgp.rev151009.bgp.top.bgp.Neighbors;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.network.instance.rev151018.network.instance.top.network.instances.network.instance.Protocols;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.network.instance.rev151018.network.instance.top.network.instances.network.instance.protocols.Protocol;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.network.instance.rev151018.network.instance.top.network.instances.network.instance.protocols.ProtocolKey;
+import org.opendaylight.yang.gen.v1.http.openconfig.net.yang.policy.types.rev151009.BGP;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.openconfig.extensions.rev160614.Protocol1;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
+import org.osgi.framework.BundleContext;
 
 /**
  * Application peer handler which handles translation from custom RIB into local RIB
  */
+@Deprecated
 public class BGPApplicationPeerModule extends org.opendaylight.controller.config.yang.bgp.rib.impl.AbstractBGPApplicationPeerModule {
 
-    private static final QName APP_ID_QNAME = QName.create(ApplicationRib.QNAME, "id").intern();
+    private BundleContext bundleContext;
 
     public BGPApplicationPeerModule(final org.opendaylight.controller.config.api.ModuleIdentifier identifier, final org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
@@ -46,56 +46,26 @@ public class BGPApplicationPeerModule extends org.opendaylight.controller.config
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final YangInstanceIdentifier id = YangInstanceIdentifier.builder().node(ApplicationRib.QNAME).nodeWithKey(ApplicationRib.QNAME, APP_ID_QNAME, getApplicationRibId().getValue()).node(Tables.QNAME).node(Tables.QNAME).build();
-        final DOMDataTreeChangeService service = (DOMDataTreeChangeService) getDataBrokerDependency().getSupportedExtensions().get(DOMDataTreeChangeService.class);
-        final ApplicationPeer appPeer = new ApplicationPeer(getApplicationRibId(), getBgpPeerId(), (RIBImpl) getTargetRibDependency(),
-            new AppPeerModuleTracker(getTargetRibDependency().getOpenConfigProvider()));
+        final RIB rib = getTargetRibDependency();
+        final WaitingServiceTracker<BgpDeployer> bgpDeployerTracker = WaitingServiceTracker.create(BgpDeployer.class, this.bundleContext);
+        final BgpDeployer bgpDeployer = bgpDeployerTracker.waitForService(WaitingServiceTracker.FIVE_MINUTES);
+        //map configuration to OpenConfig BGP
+        final Neighbor neighbor = bgpDeployer.getMappingService().fromApplicationPeer(getApplicationRibId(), getBgpPeerId());
+        //write to configuration DS
+        final KeyedInstanceIdentifier<Protocol, ProtocolKey> protocolIId = bgpDeployer.getInstanceIdentifier().child(Protocols.class)
+            .child(Protocol.class, new ProtocolKey(BGP.class, rib.getInstanceIdentifier().getKey().getId().getValue()));
+        final InstanceIdentifier<Bgp> bgpIID = protocolIId.augmentation(Protocol1.class).child(Bgp.class);
+        final KeyedInstanceIdentifier<Neighbor, NeighborKey> neighborIId = protocolIId.augmentation(Protocol1.class).child(Bgp.class)
+            .child(Neighbors.class).child(Neighbor.class, neighbor.getKey());
+        bgpDeployer.onNeighborModified(bgpIID, neighbor, () -> bgpDeployer.writeConfiguration(neighbor, neighborIId));
 
-        final ListenerRegistration<ApplicationPeer> listenerRegistration = service.registerDataTreeChangeListener(new DOMDataTreeIdentifier(LogicalDatastoreType.CONFIGURATION, id), appPeer);
-
-        return new CloseableNoEx() {
-            @Override
-            public void close() {
-                listenerRegistration.close();
-                appPeer.close();
-            }
+        return () -> {
+            bgpDeployer.onNeighborRemoved(bgpIID, neighbor);
+            bgpDeployerTracker.close();
         };
     }
 
-    private interface CloseableNoEx extends AutoCloseable {
-        @Override
-        void close();
-    }
-
-    private final class AppPeerModuleTracker implements BGPConfigModuleTracker {
-
-        private final BGPOpenconfigMapper<BGPAppPeerInstanceConfiguration> appProvider;
-        private final BGPAppPeerInstanceConfiguration bgpAppPeerInstanceConfiguration;
-
-        AppPeerModuleTracker(final Optional<BGPOpenConfigProvider> openConfigProvider) {
-            if (openConfigProvider.isPresent()) {
-                appProvider = openConfigProvider.get().getOpenConfigMapper(BGPAppPeerInstanceConfiguration.class);
-            } else {
-                appProvider = null;
-            }
-            final InstanceConfigurationIdentifier identifier = new InstanceConfigurationIdentifier(getIdentifier().getInstanceName());
-            bgpAppPeerInstanceConfiguration = new BGPAppPeerInstanceConfiguration(identifier, getApplicationRibId().getValue(),
-                    Rev130715Util.getIpv4Address(getBgpPeerId()));
-        }
-
-        @Override
-        public void onInstanceCreate() {
-            if (appProvider != null) {
-                appProvider.writeConfiguration(this.bgpAppPeerInstanceConfiguration);
-            }
-        }
-
-        @Override
-        public void onInstanceClose() {
-            if (appProvider != null) {
-                appProvider.removeConfiguration(this.bgpAppPeerInstanceConfiguration);
-            }
-        }
-
+    public void setBundleContext(final BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 }

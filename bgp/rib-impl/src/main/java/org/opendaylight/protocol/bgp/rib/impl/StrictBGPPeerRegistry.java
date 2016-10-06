@@ -36,10 +36,10 @@ import org.opendaylight.protocol.bgp.rib.impl.spi.BGPPeerRegistry;
 import org.opendaylight.protocol.bgp.rib.impl.spi.BGPSessionPreferences;
 import org.opendaylight.protocol.bgp.rib.impl.spi.PeerRegistryListener;
 import org.opendaylight.protocol.bgp.rib.spi.BGPSessionListener;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.AsNumber;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IetfInetUtil;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.AsNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IetfInetUtil;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.Open;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.BgpParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.bgp.parameters.OptionalCapabilities;
@@ -71,6 +71,10 @@ public final class StrictBGPPeerRegistry implements BGPPeerRegistry {
     private final Map<IpAddress, BGPSessionPreferences> peerPreferences = Maps.newHashMap();
     @GuardedBy("this")
     private final Set<PeerRegistryListener> listeners = new HashSet<>();
+
+    public static BGPPeerRegistry instance() {
+        return GLOBAL;
+    }
 
     @Override
     public synchronized void addPeer(final IpAddress ip, final BGPSessionListener peer, final BGPSessionPreferences preferences) {
@@ -189,7 +193,7 @@ public final class StrictBGPPeerRegistry implements BGPPeerRegistry {
         }
 
         // https://tools.ietf.org/html/rfc6286#section-2.2
-        if (openObj.getBgpIdentifier() != null && openObj.getBgpIdentifier().equals(localPref.getBgpId())) {
+        if (openObj.getBgpIdentifier() != null && openObj.getBgpIdentifier().getValue().equals(localPref.getBgpId().getValue())) {
             LOG.warn("Remote and local BGP Identifiers are the same: {}", openObj.getBgpIdentifier());
             throw new BGPDocumentedException("Remote and local BGP Identifiers are the same.", BGPError.BAD_BGP_ID);
         }
