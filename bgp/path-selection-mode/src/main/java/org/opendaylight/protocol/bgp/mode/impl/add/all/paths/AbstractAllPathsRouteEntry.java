@@ -9,6 +9,7 @@
 package org.opendaylight.protocol.bgp.mode.impl.add.all.paths;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 import org.opendaylight.protocol.bgp.mode.api.BestPathState;
@@ -17,8 +18,6 @@ import org.opendaylight.protocol.bgp.mode.impl.add.AddPathAbstractRouteEntry;
 import org.opendaylight.protocol.bgp.mode.impl.add.AddPathBestPath;
 import org.opendaylight.protocol.bgp.mode.impl.add.RouteKey;
 import org.opendaylight.yangtools.yang.data.api.schema.ContainerNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 abstract class AbstractAllPathsRouteEntry extends AddPathAbstractRouteEntry {
     @Override
@@ -43,6 +42,6 @@ abstract class AbstractAllPathsRouteEntry extends AddPathAbstractRouteEntry {
                 }
             }
         }
-        return isBestPathNew(newBestPathList);
+        return isBestPathNew(ImmutableList.copyOf(newBestPathList));
     }
 }

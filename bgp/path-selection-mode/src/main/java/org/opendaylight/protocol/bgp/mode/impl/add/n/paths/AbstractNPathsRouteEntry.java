@@ -8,13 +8,12 @@
 
 package org.opendaylight.protocol.bgp.mode.impl.add.n.paths;
 
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 import org.opendaylight.protocol.bgp.mode.impl.add.AddPathAbstractRouteEntry;
 import org.opendaylight.protocol.bgp.mode.impl.add.AddPathBestPath;
 import org.opendaylight.protocol.bgp.mode.impl.add.RouteKey;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 abstract class AbstractNPathsRouteEntry extends AddPathAbstractRouteEntry {
     private final long nBestPaths;
@@ -33,6 +32,6 @@ abstract class AbstractNPathsRouteEntry extends AddPathAbstractRouteEntry {
             newBestPathList.add(newBest);
             keyList.remove(newBest.getRouteKey());
         }
-        return isBestPathNew(newBestPathList);
+        return isBestPathNew(ImmutableList.copyOf(newBestPathList));
     }
 }

@@ -35,11 +35,6 @@ final class TestingListener implements BGPSessionListener {
     }
 
     @Override
-    public boolean isSessionActive() {
-        return true;
-    }
-
-    @Override
     public void markUptodate(final TablesKey tablesKey) {
         LOG.debug("Table marked as up-to-date {}", tablesKey);
     }
@@ -48,7 +43,7 @@ final class TestingListener implements BGPSessionListener {
     public void onSessionUp(final BGPSession session) {
         LOG.info("Client Listener: Session Up.");
         if (this.nPrefixes > 0) {
-            PrefixesBuilder.AdvertiseIpv4Prefixes(((BGPSessionImpl) session).getLimiter(), this.nPrefixes, this.extCom, this.multiPathSupport);
+            PrefixesBuilder.advertiseIpv4Prefixes(((BGPSessionImpl) session).getLimiter(), this.nPrefixes, this.extCom, this.multiPathSupport);
         }
     }
 
