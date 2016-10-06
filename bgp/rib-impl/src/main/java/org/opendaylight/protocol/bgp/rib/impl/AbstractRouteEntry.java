@@ -9,6 +9,8 @@ package org.opendaylight.protocol.bgp.rib.impl;
 
 import com.google.common.primitives.UnsignedInteger;
 import javax.annotation.concurrent.NotThreadSafe;
+
+import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.NodeIdentifier;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.PathArgument;
 import org.opendaylight.yangtools.yang.data.api.schema.ContainerNode;
@@ -35,6 +37,7 @@ abstract class AbstractRouteEntry {
     private OffsetMap offsets = OffsetMap.EMPTY;
     private ContainerNode[] values = EMPTY_ATTRIBUTES;
     private BestPath bestPath;
+    public YangInstanceIdentifier routeYang;
 
     private int addRoute(final UnsignedInteger routerId, final ContainerNode attributes) {
         int offset = this.offsets.offsetOf(routerId);

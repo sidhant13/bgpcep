@@ -38,4 +38,10 @@ final class PeerExportGroup {
     Collection<Entry<PeerId, YangInstanceIdentifier>> getPeers() {
         return peers;
     }
+
+    boolean containsPeer(PeerId peerId){
+        if(peerRoles.containsKey(peerId))
+            return true;
+        return false;
+    }
 }

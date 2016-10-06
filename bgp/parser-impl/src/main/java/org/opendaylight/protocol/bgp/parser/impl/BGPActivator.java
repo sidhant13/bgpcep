@@ -36,6 +36,7 @@ import org.opendaylight.protocol.bgp.parser.impl.message.update.MultiExitDiscrim
 import org.opendaylight.protocol.bgp.parser.impl.message.update.NextHopAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.OriginAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.OriginatorIdAttributeParser;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.QosAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.UnrecognizedAttributesSerializer;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.WithdrawnRoutesSerializer;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.AsTwoOctetSpecificEcHandler;
@@ -69,6 +70,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.mess
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.MultiExitDisc;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Origin;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.OriginatorId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Qos;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.UnrecognizedAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.update.message.WithdrawnRoutes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.open.bgp.parameters.optional.capabilities.c.parameters.GracefulRestartCapability;
@@ -156,6 +158,10 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
         final AigpAttributeParser aigpAttributeParser = new AigpAttributeParser();
         regs.add(context.registerAttributeSerializer(Aigp.class, aigpAttributeParser));
         regs.add(context.registerAttributeParser(AigpAttributeParser.TYPE, aigpAttributeParser));
+
+        final QosAttributeParser qosAttributeParser = new QosAttributeParser();
+        regs.add(context.registerAttributeSerializer(Qos.class, qosAttributeParser));
+        regs.add(context.registerAttributeParser(QosAttributeParser.TYPE, qosAttributeParser));
 
         final AsPathAttributeParser asPathAttributeParser = new AsPathAttributeParser(context.getReferenceCache());
         regs.add(context.registerAttributeSerializer(AsPath.class, asPathAttributeParser));

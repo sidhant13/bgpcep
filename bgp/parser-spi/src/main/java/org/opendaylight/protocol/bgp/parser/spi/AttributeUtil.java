@@ -15,6 +15,7 @@ public final class AttributeUtil {
 
     public static final int OPTIONAL = 128;
     public static final int TRANSITIVE = 64;
+    public static final int OPTIONAL_TRANSITIVE = 192;
     public static final int PARTIAL = 32;
     private static final int EXTENDED = 16;
 
