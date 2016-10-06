@@ -8,7 +8,6 @@
 package org.opendaylight.protocol.bgp.rib.impl;
 
 import com.google.common.base.Preconditions;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import javax.annotation.concurrent.ThreadSafe;
@@ -21,7 +20,7 @@ import org.slf4j.LoggerFactory;
  * for a sessions' channel.
  */
 @ThreadSafe
-public final class ChannelOutputLimiter extends ChannelInboundHandlerAdapter {
+final class ChannelOutputLimiter extends ChannelInboundHandlerAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(ChannelOutputLimiter.class);
     private final BGPSessionImpl session;
     private volatile boolean blocked;
@@ -31,36 +30,36 @@ public final class ChannelOutputLimiter extends ChannelInboundHandlerAdapter {
     }
 
     private void ensureWritable() {
-        if (this.blocked) {
-            LOG.trace("Blocked slow path tripped on session {}", this.session);
+        if (blocked) {
+            LOG.trace("Blocked slow path tripped on session {}", session);
             synchronized (this) {
-                while (this.blocked) {
+                while (blocked) {
                     try {
-                        LOG.debug("Waiting for session {} to become writable", this.session);
+                        LOG.debug("Waiting for session {} to become writable", session);
                         flush();
                         this.wait();
-                    } catch (final InterruptedException e) {
+                    } catch (InterruptedException e) {
                         throw new IllegalStateException("Interrupted while waiting for channel to come back", e);
                     }
                 }
 
-                LOG.debug("Resuming write on session {}", this.session);
+                LOG.debug("Resuming write on session {}", session);
             }
         }
     }
 
-    public void write(final Notification msg) {
+    void write(final Notification msg) {
         ensureWritable();
-        this.session.write(msg);
+        session.write(msg);
     }
 
-    ChannelFuture writeAndFlush(final Notification msg) {
+    void writeAndFlush(final Notification msg) {
         ensureWritable();
-        return this.session.writeAndFlush(msg);
+        session.writeAndFlush(msg);
     }
 
-    public void flush() {
-        this.session.flush();
+    void flush() {
+        session.flush();
     }
 
     @Override
@@ -68,8 +67,8 @@ public final class ChannelOutputLimiter extends ChannelInboundHandlerAdapter {
         final boolean w = ctx.channel().isWritable();
 
         synchronized (this) {
-            this.blocked = !w;
-            LOG.debug("Writes on session {} {}", this.session, w ? "unblocked" : "blocked");
+            blocked = !w;
+            LOG.debug("Writes on session {} {}", session, w ? "unblocked" : "blocked");
 
             if (w) {
                 notifyAll();
@@ -82,7 +81,7 @@ public final class ChannelOutputLimiter extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         synchronized (this) {
-            this.blocked = false;
+            blocked = false;
             notifyAll();
         }
 

@@ -11,8 +11,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
 import com.google.common.collect.Lists;
-import io.netty.channel.epoll.Epoll;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.management.InstanceAlreadyExistsException;
@@ -23,24 +21,26 @@ import org.opendaylight.controller.config.api.ValidationException;
 import org.opendaylight.controller.config.api.jmx.CommitStatus;
 import org.opendaylight.controller.config.spi.ModuleFactory;
 import org.opendaylight.controller.config.util.ConfigTransactionJMXClient;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.PortNumber;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.SendReceive;
+import org.opendaylight.controller.config.yang.tcpmd5.jni.cfg.NativeKeyAccessFactoryModuleFactory;
+import org.opendaylight.controller.config.yang.tcpmd5.netty.cfg.MD5ClientChannelFactoryModuleFactory;
+import org.opendaylight.controller.config.yang.tcpmd5.netty.cfg.MD5ClientChannelFactoryModuleMXBean;
+import org.opendaylight.tcpmd5.jni.NativeTestSupport;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.PeerRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv4AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.MplsLabeledVpnSubsequentAddressFamily;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.rfc2385.cfg.rev160324.Rfc2385Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.tcpmd5.cfg.rev140427.Rfc2385Key;
 import org.opendaylight.yangtools.sal.binding.generator.util.BindingRuntimeContext;
 
 public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
 
-    private static final int EXP_INSTANCES = 18;
     private static final String INSTANCE_NAME = "bgp-peer-module-impl";
     private static final String FACTORY_NAME = BGPPeerModuleFactory.NAME;
 
     private static final IpAddress HOST = new IpAddress(new Ipv4Address("127.0.0.1"));
-    private static final PortNumber PORT_NUMBER = new PortNumber(1);
+    private static final PortNumber portNumber = new PortNumber(1);
 
     @Override
     protected BindingRuntimeContext getBindingRuntimeContext() {
@@ -55,8 +55,9 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
         final List<ModuleFactory> moduleFactories = super.getModuleFactories();
         moduleFactories.add(new BGPPeerModuleFactory());
         moduleFactories.add(new BGPTableTypeImplModuleFactory());
+        moduleFactories.add(new NativeKeyAccessFactoryModuleFactory());
+        moduleFactories.add(new MD5ClientChannelFactoryModuleFactory());
         moduleFactories.add(new StrictBgpPeerRegistryModuleFactory());
-        moduleFactories.add(new AddPathImplModuleFactory());
         return moduleFactories;
     }
 
@@ -83,7 +84,7 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
     @Test
     public void testValidationExceptionHostNotSet() throws Exception {
         try {
-            createBgpPeerInstance(null, PORT_NUMBER, false);
+            createBgpPeerInstance(null, portNumber, false);
             fail();
         } catch (final ValidationException e) {
             assertTrue(e.getMessage().contains("Host value is not set."));
@@ -94,7 +95,33 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
     public void testCreateBean() throws Exception {
         final CommitStatus status = createBgpPeerInstance();
         assertBeanCount(1, FACTORY_NAME);
-        assertStatus(status, EXP_INSTANCES, 0, 0);
+        assertStatus(status, 16, 0, 0);
+    }
+
+    @Test
+    public void testCreateBeanWithMD5() throws Exception {
+        NativeTestSupport.assumeSupportedPlatform();
+        final CommitStatus status = createBgpPeerInstance(true);
+        assertBeanCount(1, FACTORY_NAME);
+        assertStatus(status, 18, 0, 0);
+    }
+
+    @Test
+    public void testMD5ValidationFailure() throws Exception {
+        NativeTestSupport.assumeSupportedPlatform();
+        createBgpPeerInstance(true);
+        // now remove md5 from dispatcher
+        final ConfigTransactionJMXClient transaction = this.configRegistryClient.createTransaction();
+        final ObjectName nameCreated = transaction.lookupConfigBean(FACTORY_NAME, INSTANCE_NAME);
+        final BGPPeerModuleMXBean mxBean = transaction.newMXBeanProxy(nameCreated, BGPPeerModuleMXBean.class);
+        final BGPDispatcherImplModuleMXBean bgpDispatcherImplModuleMXBean = getBgpDispatcherImplModuleMXBean(transaction, mxBean);
+        bgpDispatcherImplModuleMXBean.setMd5ChannelFactory(null);
+        try {
+            transaction.validateConfig();
+            fail();
+        } catch (final ValidationException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("Underlying dispatcher does not support MD5 clients"));
+        }
     }
 
     @Test
@@ -104,7 +131,7 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
         assertBeanCount(1, FACTORY_NAME);
         status = transaction.commit();
         assertBeanCount(1, FACTORY_NAME);
-        assertStatus(status, 0, 0, EXP_INSTANCES);
+        assertStatus(status, 0, 0, 16);
     }
 
     @Test
@@ -117,7 +144,7 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
         mxBean.setPort(new PortNumber(10));
         status = transaction.commit();
         assertBeanCount(1, FACTORY_NAME);
-        assertStatus(status, 0, 1, EXP_INSTANCES - 1);
+        assertStatus(status, 0, 1, 15);
     }
 
     private ObjectName createBgpPeerInstance(final ConfigTransactionJMXClient transaction, final IpAddress host,
@@ -129,48 +156,44 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
         mxBean.setHost(host);
         mxBean.setPort(port);
         mxBean.setAdvertizedTable(Collections.<ObjectName>emptyList());
-        mxBean.setRouteRefresh(false);
         {
             final ObjectName ribON = createRIBImplModuleInstance(transaction);
             mxBean.setRib(ribON);
         }
-        mxBean.setAddPath(createAddPathCollection(transaction));
-        if (Epoll.isAvailable()) {
+        if (md5) {
+            final BGPDispatcherImplModuleMXBean bgpDispatcherProxy = getBgpDispatcherImplModuleMXBean(transaction, mxBean);
+            final ObjectName jniON = transaction.createModule(NativeKeyAccessFactoryModuleFactory.NAME, NativeKeyAccessFactoryModuleFactory.NAME);
+            final ObjectName md5ClientON = transaction.createModule(MD5ClientChannelFactoryModuleFactory.NAME,
+                    MD5ClientChannelFactoryModuleFactory.NAME);
+            final MD5ClientChannelFactoryModuleMXBean md5ClientProxy =
+                    transaction.newMXBeanProxy(md5ClientON, MD5ClientChannelFactoryModuleMXBean.class);
+            md5ClientProxy.setKeyAccessFactory(jniON);
+
+            bgpDispatcherProxy.setMd5ChannelFactory(md5ClientON);
+
             mxBean.setPassword(Rfc2385Key.getDefaultInstance("foo"));
+
         }
-        if (internalPeerRole) {
+
+        if(internalPeerRole) {
             mxBean.setPeerRole(PeerRole.Internal);
         }
 
         mxBean.setAdvertizedTable(Lists.newArrayList(BGPTableTypeImplModuleTest.createTableInstance(transaction,
             new IdentityAttributeRef(Ipv4AddressFamily.QNAME.toString()),
             new IdentityAttributeRef(MplsLabeledVpnSubsequentAddressFamily.QNAME.toString()))));
-
-        final ObjectName notificationBrokerON = createNotificationBrokerInstance(transaction);
-        final ObjectName bindingBrokerON = createBindingBrokerImpl(transaction, createCompatibleDataBrokerInstance(transaction), notificationBrokerON);
-        mxBean.setRpcRegistry(bindingBrokerON);
         return nameCreated;
-    }
-
-    private static List<ObjectName> createAddPathCollection(final ConfigTransactionJMXClient transaction) throws InstanceAlreadyExistsException {
-        final ObjectName name1 = transaction.createModule(AddPathImplModuleFactory.NAME, "add-path-inst-1");
-        final AddPathImplModuleMXBean mxBean = transaction.newMXBeanProxy(name1, AddPathImplModuleMXBean.class);
-        mxBean.setAddressFamily(AddPathImplModuleTest.createAddressFamily(transaction, "add-path-inst-1"));
-        mxBean.setSendReceive(SendReceive.Both);
-
-        final ObjectName name2 = transaction.createModule(AddPathImplModuleFactory.NAME, "add-path-inst-2");
-        final AddPathImplModuleMXBean mxBean2 = transaction.newMXBeanProxy(name2, AddPathImplModuleMXBean.class);
-        mxBean2.setAddressFamily(AddPathImplModuleTest.createAddressFamily(transaction, "add-path-inst-2"));
-        mxBean2.setSendReceive(SendReceive.Receive);
-
-        final List<ObjectName> ret = new ArrayList<ObjectName>();
-        ret.add(name1);
-        ret.add(name2);
-        return ret;
     }
 
     private static ObjectName createPeerRegistry(final ConfigTransactionJMXClient transaction) throws InstanceAlreadyExistsException {
         return transaction.createModule(StrictBgpPeerRegistryModuleFactory.NAME, "peer-registry");
+    }
+
+    private static BGPDispatcherImplModuleMXBean getBgpDispatcherImplModuleMXBean(final ConfigTransactionJMXClient transaction,
+            final BGPPeerModuleMXBean mxBean) {
+        final RIBImplModuleMXBean ribProxy = transaction.newMXBeanProxy(mxBean.getRib(), RIBImplModuleMXBean.class);
+        final ObjectName dispatcherON = ribProxy.getBgpDispatcher();
+        return transaction.newMXBeanProxy(dispatcherON, BGPDispatcherImplModuleMXBean.class);
     }
 
     private CommitStatus createBgpPeerInstance() throws Exception {
@@ -178,7 +201,7 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
     }
 
     private CommitStatus createBgpPeerInstance(final boolean md5) throws Exception {
-        return createBgpPeerInstance(HOST, PORT_NUMBER, md5);
+        return createBgpPeerInstance(HOST, portNumber, md5);
     }
 
     private CommitStatus createBgpPeerInstance(final IpAddress host, final PortNumber port, final boolean md5) throws Exception {
@@ -190,7 +213,7 @@ public class BGPPeerModuleTest extends AbstractRIBImplModuleTest {
     private CommitStatus createInternalBgpPeerInstance()
         throws Exception {
         final ConfigTransactionJMXClient transaction = this.configRegistryClient.createTransaction();
-        createBgpPeerInstance(transaction, HOST, PORT_NUMBER, false, true);
+        createBgpPeerInstance(transaction, HOST, portNumber, false, true);
         return transaction.commit();
     }
 }

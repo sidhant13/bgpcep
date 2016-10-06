@@ -9,7 +9,7 @@
 package org.opendaylight.protocol.bgp.rib.impl.spi;
 
 import javax.annotation.Nonnull;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 
 /**
  * Listens to the changes in a PeerRegisty.

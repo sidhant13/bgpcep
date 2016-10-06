@@ -12,25 +12,23 @@ import java.util.List;
 import org.opendaylight.protocol.bgp.parser.impl.message.BGPKeepAliveMessageParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.BGPNotificationMessageParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.BGPOpenMessageParser;
-import org.opendaylight.protocol.bgp.parser.impl.message.BGPRouteRefreshMessageParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.BGPUpdateMessageParser;
-import org.opendaylight.protocol.bgp.parser.impl.message.open.AddPathCapabilityHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.open.As4CapabilityHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.open.BgpExtendedMessageCapabilityHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.open.CapabilityParameterParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.open.GracefulCapabilityHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.open.MultiProtocolCapabilityHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.open.RouteRefreshCapabilityHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.AS4AggregatorAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.AS4PathAttributeParser;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.AdvertizedRoutesSerializer;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.AggregatorAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.AigpAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.AsPathAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.AtomicAggregateAttributeParser;
-import org.opendaylight.protocol.bgp.parser.impl.message.update.BgpPrefixSidAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.ClusterIdAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.CommunitiesAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.ExtendedCommunitiesAttributeParser;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.Ipv4NlriParser;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.Ipv6NlriParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.LocalPreferenceAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.MPReachAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.MPUnreachAttributeParser;
@@ -38,19 +36,18 @@ import org.opendaylight.protocol.bgp.parser.impl.message.update.MultiExitDiscrim
 import org.opendaylight.protocol.bgp.parser.impl.message.update.NextHopAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.OriginAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.OriginatorIdAttributeParser;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.QosAttributeParser;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.UnrecognizedAttributesSerializer;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.WithdrawnRoutesSerializer;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.AsTwoOctetSpecificEcHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.EncapsulationEC;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.Ipv4SpecificEcHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.LinkBandwidthEC;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.OpaqueEcHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.RouteOriginAsTwoOctetEcHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.RouteOriginIpv4EcHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.RouteTargetAsTwoOctetEcHandler;
 import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.RouteTargetIpv4EcHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.four.octect.as.specific.Generic4OctASEcHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.four.octect.as.specific.RouteOrigin4OctectASEcHandler;
-import org.opendaylight.protocol.bgp.parser.impl.message.update.extended.communities.four.octect.as.specific.RouteTarget4OctectASEcHandler;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.next.hop.Ipv4NextHopParserSerializer;
+import org.opendaylight.protocol.bgp.parser.impl.message.update.next.hop.Ipv6NextHopParserSerializer;
 import org.opendaylight.protocol.bgp.parser.spi.AbstractBGPExtensionProviderActivator;
 import org.opendaylight.protocol.bgp.parser.spi.AddressFamilyRegistry;
 import org.opendaylight.protocol.bgp.parser.spi.BGPExtensionProviderContext;
@@ -62,12 +59,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.mess
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.Update;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.BgpParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.bgp.parameters.optional.capabilities.c.parameters.As4BytesCapability;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.bgp.parameters.optional.capabilities.c.parameters.BgpExtendedMessageCapability;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Aggregator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Aigp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.AsPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.AtomicAggregate;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.BgpPrefixSid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.ClusterId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Communities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.ExtendedCommunities;
@@ -75,31 +70,28 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.mess
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.MultiExitDisc;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Origin;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.OriginatorId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Qos;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.UnrecognizedAttributes;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.RouteRefresh;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.mp.capabilities.AddPathCapability;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.mp.capabilities.GracefulRestartCapability;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.mp.capabilities.MultiprotocolCapability;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.mp.capabilities.RouteRefreshCapability;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.update.message.WithdrawnRoutes;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.open.bgp.parameters.optional.capabilities.c.parameters.GracefulRestartCapability;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.open.bgp.parameters.optional.capabilities.c.parameters.MultiprotocolCapability;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.update.attributes.MpReachNlri;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.update.attributes.MpUnreachNlri;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.update.attributes.mp.reach.nlri.AdvertizedRoutes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv4AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv6AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.MplsLabeledVpnSubsequentAddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.NextHop;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.UnicastSubsequentAddressFamily;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.As4GenericSpecExtendedCommunityCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.As4RouteOriginExtendedCommunityCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.As4RouteTargetExtendedCommunityCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.AsSpecificExtendedCommunityCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.EncapsulationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.Inet4SpecificExtendedCommunityCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.LinkBandwidthCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.OpaqueExtendedCommunityCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.RouteOriginExtendedCommunityCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.RouteOriginIpv4Case;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.RouteTargetExtendedCommunityCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.RouteTargetIpv4Case;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.next.hop.c.next.hop.Ipv4NextHopCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.next.hop.c.next.hop.Ipv6NextHopCase;
 
 public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
 
@@ -113,16 +105,27 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
     protected List<AutoCloseable> startImpl(final BGPExtensionProviderContext context) {
         final List<AutoCloseable> regs = new ArrayList<>();
 
+        regs.add(context.registerNlriSerializer(AdvertizedRoutes.class, new AdvertizedRoutesSerializer()));
+        regs.add(context.registerNlriSerializer(WithdrawnRoutes.class, new WithdrawnRoutesSerializer()));
+
         regs.add(context.registerAddressFamily(Ipv4AddressFamily.class, IPV4_AFI));
         regs.add(context.registerAddressFamily(Ipv6AddressFamily.class, IPV6_AFI));
 
         regs.add(context.registerSubsequentAddressFamily(UnicastSubsequentAddressFamily.class, UNICAST_SAFI));
         regs.add(context.registerSubsequentAddressFamily(MplsLabeledVpnSubsequentAddressFamily.class, VPN_SAFI));
 
-        registerExtendedCommunities(regs, context);
-        registerCapabilityParsers(regs, context);
-        registerAttributeParsers(regs, context);
-        registerMessageParsers(regs, context);
+        final Ipv4NextHopParserSerializer ipv4NextHopParser = new Ipv4NextHopParserSerializer();
+        regs.add(context.registerNlriParser(Ipv4AddressFamily.class, UnicastSubsequentAddressFamily.class,
+            new Ipv4NlriParser(), ipv4NextHopParser, Ipv4NextHopCase.class, Ipv6NextHopCase.class));
+
+        final Ipv6NextHopParserSerializer ipv6NextHopParser = new Ipv6NextHopParserSerializer();
+        regs.add(context.registerNlriParser(Ipv6AddressFamily.class, UnicastSubsequentAddressFamily.class, new
+            Ipv6NlriParser(), ipv6NextHopParser, Ipv4NextHopCase.class, Ipv6NextHopCase.class));
+
+        this.registerExtendedCommunities(regs, context);
+        this.registerCapabilityParsers(regs, context);
+        this.registerAttributeParsers(regs, context);
+        this.registerMessageParsers(regs, context);
         return regs;
     }
 
@@ -133,14 +136,6 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
         final MultiProtocolCapabilityHandler multi = new MultiProtocolCapabilityHandler(afiReg, safiReg);
         regs.add(context.registerCapabilityParser(MultiProtocolCapabilityHandler.CODE, multi));
         regs.add(context.registerCapabilitySerializer(MultiprotocolCapability.class, multi));
-
-        final AddPathCapabilityHandler addPath = new AddPathCapabilityHandler(afiReg, safiReg);
-        regs.add(context.registerCapabilityParser(AddPathCapabilityHandler.CODE, addPath));
-        regs.add(context.registerCapabilitySerializer(AddPathCapability.class, addPath));
-
-        final RouteRefreshCapabilityHandler routeRefresh = new RouteRefreshCapabilityHandler();
-        regs.add(context.registerCapabilityParser(RouteRefreshCapabilityHandler.CODE, routeRefresh));
-        regs.add(context.registerCapabilitySerializer(RouteRefreshCapability.class, routeRefresh));
 
         final As4CapabilityHandler as4 = new As4CapabilityHandler();
         regs.add(context.registerCapabilityParser(As4CapabilityHandler.CODE, as4));
@@ -153,17 +148,9 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
         final CapabilityParameterParser cpp = new CapabilityParameterParser(context.getCapabilityRegistry());
         regs.add(context.registerParameterParser(CapabilityParameterParser.TYPE, cpp));
         regs.add(context.registerParameterSerializer(BgpParameters.class, cpp));
-
-        final BgpExtendedMessageCapabilityHandler bgpextmessage = new BgpExtendedMessageCapabilityHandler();
-        regs.add(context.registerCapabilityParser(BgpExtendedMessageCapabilityHandler.CODE, bgpextmessage));
-        regs.add(context.registerCapabilitySerializer(BgpExtendedMessageCapability.class, bgpextmessage));
     }
 
     private void registerAttributeParsers(final List<AutoCloseable> regs, final BGPExtensionProviderContext context) {
-        final BgpPrefixSidAttributeParser prefixSidAttributeParser = new BgpPrefixSidAttributeParser(context.getBgpPrefixSidTlvRegistry());
-        regs.add(context.registerAttributeSerializer(BgpPrefixSid.class, prefixSidAttributeParser));
-        regs.add(context.registerAttributeParser(BgpPrefixSidAttributeParser.TYPE, prefixSidAttributeParser));
-
         final OriginAttributeParser originAttributeParser = new OriginAttributeParser();
         regs.add(context.registerAttributeSerializer(Origin.class, originAttributeParser));
         regs.add(context.registerAttributeParser(OriginAttributeParser.TYPE, originAttributeParser));
@@ -171,6 +158,10 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
         final AigpAttributeParser aigpAttributeParser = new AigpAttributeParser();
         regs.add(context.registerAttributeSerializer(Aigp.class, aigpAttributeParser));
         regs.add(context.registerAttributeParser(AigpAttributeParser.TYPE, aigpAttributeParser));
+
+        final QosAttributeParser qosAttributeParser = new QosAttributeParser();
+        regs.add(context.registerAttributeSerializer(Qos.class, qosAttributeParser));
+        regs.add(context.registerAttributeParser(QosAttributeParser.TYPE, qosAttributeParser));
 
         final AsPathAttributeParser asPathAttributeParser = new AsPathAttributeParser(context.getReferenceCache());
         regs.add(context.registerAttributeSerializer(AsPath.class, asPathAttributeParser));
@@ -244,12 +235,6 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
         final BGPKeepAliveMessageParser kamp = new BGPKeepAliveMessageParser();
         regs.add(context.registerMessageParser(BGPKeepAliveMessageParser.TYPE, kamp));
         regs.add(context.registerMessageSerializer(Keepalive.class, kamp));
-
-        final AddressFamilyRegistry afiReg = context.getAddressFamilyRegistry();
-        final SubsequentAddressFamilyRegistry safiReg = context.getSubsequentAddressFamilyRegistry();
-        final BGPRouteRefreshMessageParser rrmp = new BGPRouteRefreshMessageParser(afiReg, safiReg);
-        regs.add(context.registerMessageParser(BGPRouteRefreshMessageParser.TYPE, rrmp));
-        regs.add(context.registerMessageSerializer(RouteRefresh.class, rrmp));
     }
 
     private void registerExtendedCommunities(final List<AutoCloseable> regs, final BGPExtensionProviderContext context) {
@@ -301,28 +286,5 @@ public final class BGPActivator extends AbstractBGPExtensionProviderActivator {
         regs.add(context.registerExtendedCommunityParser(routeTargetIpv4EcHandler.getType(false), routeTargetIpv4EcHandler.getSubType(),
                 routeTargetIpv4EcHandler));
         regs.add(context.registerExtendedCommunitySerializer(RouteTargetIpv4Case.class, routeTargetIpv4EcHandler));
-
-        final LinkBandwidthEC linkBandwidthECHandler = new LinkBandwidthEC();
-        regs.add(context.registerExtendedCommunityParser(linkBandwidthECHandler.getType(false), linkBandwidthECHandler.getSubType(),
-                linkBandwidthECHandler));
-        regs.add(context.registerExtendedCommunitySerializer(LinkBandwidthCase.class, linkBandwidthECHandler));
-
-        final Generic4OctASEcHandler gen4OctASEcHandler = new Generic4OctASEcHandler();
-        regs.add(context.registerExtendedCommunityParser(gen4OctASEcHandler.getType(true), gen4OctASEcHandler.getSubType(), gen4OctASEcHandler));
-        regs.add(context.registerExtendedCommunityParser(gen4OctASEcHandler.getType(false), gen4OctASEcHandler.getSubType(), gen4OctASEcHandler));
-        regs.add(context.registerExtendedCommunitySerializer(As4GenericSpecExtendedCommunityCase.class, gen4OctASEcHandler));
-
-        final RouteTarget4OctectASEcHandler rt4ASHandler = new RouteTarget4OctectASEcHandler();
-        regs.add(context.registerExtendedCommunityParser(rt4ASHandler.getType(true), rt4ASHandler.getSubType(), rt4ASHandler));
-        regs.add(context.registerExtendedCommunitySerializer(As4RouteTargetExtendedCommunityCase.class, rt4ASHandler));
-
-        final RouteOrigin4OctectASEcHandler rOrig4Oct = new RouteOrigin4OctectASEcHandler();
-        regs.add(context.registerExtendedCommunityParser(rOrig4Oct.getType(true), rOrig4Oct.getSubType(), rOrig4Oct));
-        regs.add(context.registerExtendedCommunitySerializer(As4RouteOriginExtendedCommunityCase.class, rOrig4Oct));
-
-        final EncapsulationEC encapsulationECHandler = new EncapsulationEC();
-        regs.add(context.registerExtendedCommunityParser(encapsulationECHandler.getType(true), encapsulationECHandler.getSubType(),
-                encapsulationECHandler));
-        regs.add(context.registerExtendedCommunitySerializer(EncapsulationCase.class, encapsulationECHandler));
     }
 }

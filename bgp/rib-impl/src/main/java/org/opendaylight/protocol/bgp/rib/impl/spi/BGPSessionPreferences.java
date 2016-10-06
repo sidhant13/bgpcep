@@ -9,9 +9,9 @@ package org.opendaylight.protocol.bgp.rib.impl.spi;
 
 import com.google.common.base.Optional;
 import java.util.List;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.AsNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.AsNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.BgpParameters;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.BgpId;
 
 /**
  * DTO for BGP Session preferences, that contains BGP Open message.
@@ -22,7 +22,7 @@ public final class BGPSessionPreferences {
 
     private final int hold;
 
-    private final BgpId bgpId;
+    private final Ipv4Address bgpId;
 
     private final List<BgpParameters> params;
 
@@ -38,13 +38,12 @@ public final class BGPSessionPreferences {
      * @param bgpId local BGP Identifier
      * @param remoteAs expected remote As Number
      * @param params list of advertised parameters
-     * @param md5Password - md5password
      */
-    public BGPSessionPreferences(final AsNumber as, final int hold, final BgpId bgpId, final AsNumber remoteAs,
-            final List<BgpParameters> params, final Optional<byte[]> md5Password) {
+    public BGPSessionPreferences(final AsNumber as, final int hold, final Ipv4Address bgpId, final AsNumber remoteAs,
+        final List<BgpParameters> params, final Optional<byte[]> md5Password) {
         this.as = as;
         this.hold = hold;
-        this.bgpId = (bgpId != null) ? new BgpId(bgpId) : null;
+        this.bgpId = bgpId;
         this.remoteAs = remoteAs;
         this.params = params;
         this.md5Password = md5Password;
@@ -73,7 +72,7 @@ public final class BGPSessionPreferences {
      *
      * @return BGP identifier
      */
-    public BgpId getBgpId() {
+    public Ipv4Address getBgpId() {
         return this.bgpId;
     }
 

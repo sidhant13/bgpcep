@@ -34,27 +34,36 @@ import org.opendaylight.controller.config.api.DynamicMBeanWithInstance;
 import org.opendaylight.controller.config.api.ModuleIdentifier;
 import org.opendaylight.controller.config.api.ValidationException;
 import org.opendaylight.controller.config.api.jmx.CommitStatus;
+import org.opendaylight.controller.config.manager.impl.AbstractConfigTest;
 import org.opendaylight.controller.config.manager.impl.AbstractMockedModule;
+import org.opendaylight.controller.config.manager.impl.factoriesresolver.HardcodedModuleFactoriesResolver;
 import org.opendaylight.controller.config.spi.ModuleFactory;
 import org.opendaylight.controller.config.util.ConfigTransactionJMXClient;
+import org.opendaylight.controller.config.yang.bgp.parser.spi.SimpleBGPExtensionProviderContextModuleFactory;
 import org.opendaylight.controller.config.yang.netty.threadgroup.NettyThreadgroupModuleFactory;
 import org.opendaylight.protocol.bgp.rib.impl.spi.BGPDispatcher;
 import org.opendaylight.protocol.bgp.rib.impl.spi.BGPPeerRegistry;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.PortNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 
-public class BGPPeerAcceptorModuleTest extends AbstractRIBImplModuleTest {
+public class BGPPeerAcceptorModuleTest extends AbstractConfigTest {
 
     private static final String INSTANCE_NAME = "bgp-peer-acceptor";
     private static final String FACTORY_NAME = BGPPeerAcceptorModuleFactory.NAME;
 
-    @Override
-    protected List<ModuleFactory> getModuleFactories() {
+    @Before
+    public void setUp() throws Exception {
+        final List<ModuleFactory> moduleFactories = getModuleFactories();
+        super.initConfigTransactionManagerImpl(new HardcodedModuleFactoriesResolver(this.mockedContext, moduleFactories.toArray(new ModuleFactory[moduleFactories.size()])));
+    }
+
+    private List<ModuleFactory> getModuleFactories() {
         final List<ModuleFactory> moduleFactories = Lists.newArrayList();
         moduleFactories.add(new StrictBgpPeerRegistryModuleFactory());
         moduleFactories.add(new BGPPeerAcceptorModuleFactory());
         moduleFactories.add(new NettyThreadgroupModuleFactory());
+        moduleFactories.add(new SimpleBGPExtensionProviderContextModuleFactory());
         moduleFactories.add(createClassBasedCBF(MockedDispatcherModule.class, "dispatch"));
         return moduleFactories;
     }
@@ -138,5 +147,35 @@ public class BGPPeerAcceptorModuleTest extends AbstractRIBImplModuleTest {
 
         @Override
         protected AutoCloseable prepareMockedInstance() throws Exception {return dispatcher;}
+
+        @Override
+        public ObjectName getWorkerGroup() {return null;}
+
+        @Override
+        public void setWorkerGroup(final ObjectName workerGroup) {}
+
+        @Override
+        public ObjectName getBgpExtensions() {return null;}
+
+        @Override
+        public void setBgpExtensions(final ObjectName bgpExtensions) {}
+
+        @Override
+        public ObjectName getMd5ChannelFactory() {return null;}
+
+        @Override
+        public void setMd5ChannelFactory(final ObjectName md5ChannelFactory) {}
+
+        @Override
+        public ObjectName getBossGroup() {return null;}
+
+        @Override
+        public void setBossGroup(final ObjectName bossGroup) {}
+
+        @Override
+        public ObjectName getMd5ServerChannelFactory() {return null;}
+
+        @Override
+        public void setMd5ServerChannelFactory(final ObjectName md5ServerChannelFactory) {}
     }
 }

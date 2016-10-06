@@ -5,7 +5,7 @@ module bgp-rib {
 
     import bgp-message { prefix bgp-msg; revision-date 2013-09-19; }
     import bgp-multiprotocol { prefix bgp-mp; revision-date 2013-09-19; }
-    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
 
         organization "Cisco Systems, Inc.";
         contact "Robert Varga <rovarga@cisco.com>";
@@ -50,13 +50,6 @@ module bgp-rib {
             enum ibgp;
             enum rr-client;
             enum internal;
-        }
-    }
-
-    typedef simple-routing-policy {
-        type enumeration {
-            enum announce-none { description "Don't announce routes to this peer"; }
-            enum learn-none { description "Don't learn routes from this peer"; }
         }
     }
 
@@ -107,16 +100,16 @@ module bgp-rib {
                 leaf peer-id {
                     type peer-id;
                 }
+                leaf node-id{
+                    type inet:uri;
+                }
                 leaf peer-role {
                     type peer-role;
                     mandatory true;
                 }
-                leaf simple-routing-policy {
-                    type simple-routing-policy;
-                }
                 list supported-tables {
                     key "afi safi";
-                    uses bgp-mp:bgp-add-path-table-type;
+                    uses bgp-mp:bgp-table-type;
                 }
                 container adj-rib-in {
                     description "Routes as we have received them from the peer.";
