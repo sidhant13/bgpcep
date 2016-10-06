@@ -14,7 +14,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.opendaylight.protocol.bgp.parser.BGPDocumentedException;
 import org.opendaylight.protocol.bgp.parser.BGPParsingException;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.ExtendedCommunity;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.Inet4SpecificExtendedCommunityCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.extended.community.extended.community.Inet4SpecificExtendedCommunityCaseBuilder;
@@ -30,7 +30,7 @@ public class Ipv4SpecificEcHandlerTest {
     public void testHandler() throws BGPDocumentedException, BGPParsingException {
         final Ipv4SpecificEcHandler handler = new Ipv4SpecificEcHandler();
         final Inet4SpecificExtendedCommunityCase expected = new Inet4SpecificExtendedCommunityCaseBuilder().setInet4SpecificExtendedCommunity(
-                new Inet4SpecificExtendedCommunityBuilder().setGlobalAdministrator(new Ipv4Address("12.51.2.5")).setLocalAdministrator(
+                new Inet4SpecificExtendedCommunityBuilder().setTransitive(true).setGlobalAdministrator(new Ipv4Address("12.51.2.5")).setLocalAdministrator(
                         new byte[] { 21, 45 }).build()).build();
 
         final ExtendedCommunity exComm = handler.parseExtendedCommunity(Unpooled.copiedBuffer(INPUT));

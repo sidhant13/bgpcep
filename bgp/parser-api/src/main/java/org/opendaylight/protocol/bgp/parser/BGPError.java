@@ -144,8 +144,6 @@ public enum BGPError {
      */
     UNSUPPORTED_CAPABILITY((short) 2, (short) 7);
 
-    public static final String MANDATORY_ATTR_MISSING_MSG = "Well known mandatory attribute missing: ";
-
     private static final Map<BGPErrorIdentifier, BGPError> VALUE_MAP;
 
     static {

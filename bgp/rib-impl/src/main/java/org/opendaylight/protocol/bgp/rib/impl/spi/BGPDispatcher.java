@@ -12,7 +12,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.Future;
 import java.net.InetSocketAddress;
 import org.opendaylight.protocol.bgp.rib.spi.BGPSession;
-import org.opendaylight.protocol.concepts.KeyMapping;
+import org.opendaylight.protocol.framework.ReconnectStrategy;
+import org.opendaylight.protocol.framework.ReconnectStrategyFactory;
+import org.opendaylight.tcpmd5.api.KeyMapping;
 
 /**
  * Dispatcher class for creating BGP clients.
@@ -22,32 +24,32 @@ public interface BGPDispatcher{
     /**
      * Creates BGP client.
      *
-     * @param remoteAddress remote Peer address
+     * @param address Peer address
      * @param peerRegistry BGP peer registry
-     * @param retryTimer Retry timer
+     * @param strategy reconnection strategy
      * @return Future promising a client session
      */
-    Future<? extends BGPSession> createClient(InetSocketAddress remoteAddress, BGPPeerRegistry peerRegistry, int retryTimer);
+    Future<? extends BGPSession> createClient(InetSocketAddress address, BGPPeerRegistry peerRegistry, ReconnectStrategy strategy);
 
     /**
      * Creates Reconnecting client.
      *
-     * @param remoteAddress remote Peer Address
+     * @param address Peer address
      * @param peerRegistry BGP peer registry
-     * @param retryTimer Retry timer
+     * @param connectStrategyFactory reconnection strategy
      * @param keys for TCPMD5
      * @return Future promising a client session
      */
-    Future<Void> createReconnectingClient(InetSocketAddress remoteAddress,
-        BGPPeerRegistry peerRegistry, int retryTimer, Optional<KeyMapping> keys);
+    Future<Void> createReconnectingClient(InetSocketAddress address,
+        BGPPeerRegistry peerRegistry, ReconnectStrategyFactory connectStrategyFactory, Optional<KeyMapping> keys);
 
     /**
-     * Create new BGP server to accept incoming bgp connections (bound to provided socket localAddress).
+     * Create new BGP server to accept incoming bgp connections (bound to provided socket address).
      *
      * @param peerRegistry BGP peer registry
-     * @param localAddress Peer localAddress
+     * @param address Peer address
      *
      * @return ChannelFuture promising a client session
      */
-    ChannelFuture createServer(BGPPeerRegistry peerRegistry, InetSocketAddress localAddress);
+    ChannelFuture createServer(BGPPeerRegistry peerRegistry, InetSocketAddress address);
 }

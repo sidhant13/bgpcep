@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.opendaylight.bgpcep</groupId>
         <artifactId>bgp-parent</artifactId>
-        <version>0.6.1-SNAPSHOT</version>
+        <version>0.5.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>bgp-parser-impl</artifactId>
@@ -39,6 +39,10 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>bgp-concepts</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>bgp-inet</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -71,7 +75,7 @@
         </dependency>
         <dependency>
             <groupId>org.opendaylight.mdsal.model</groupId>
-            <artifactId>ietf-inet-types-2013-07-15</artifactId>
+            <artifactId>ietf-inet-types</artifactId>
         </dependency>
         <dependency>
             <groupId>org.opendaylight.yangtools</groupId>

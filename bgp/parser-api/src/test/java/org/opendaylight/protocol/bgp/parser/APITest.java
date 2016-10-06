@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
 import org.opendaylight.protocol.util.ByteArray;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.AsNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.AsNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.Open;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.OpenBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.BgpParameters;
@@ -26,7 +26,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.mess
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.bgp.parameters.optional.capabilities.c.parameters.As4BytesCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.CParameters1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.CParameters1Builder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.mp.capabilities.MultiprotocolCapabilityBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.open.bgp.parameters.optional.capabilities.c.parameters.MultiprotocolCapabilityBuilder;
 
 public class APITest {
 
@@ -73,27 +73,13 @@ public class APITest {
         assertEquals(10, AsNumberUtil.advertizedAsNumber(open2).getValue().intValue());
     }
 
-    @Test
-    public void testBgpExtendedMessageUtil() {
-        final List<BgpParameters> params = new ArrayList<>();
-        final List<OptionalCapabilities> capas = new ArrayList<>();
-        capas.add(new OptionalCapabilitiesBuilder().setCParameters( new CParametersBuilder().addAugmentation(
-            CParameters1.class, new CParameters1Builder().setMultiprotocolCapability( new MultiprotocolCapabilityBuilder()
-                .build()).build()).build()).build());
-        capas.add(new OptionalCapabilitiesBuilder().setCParameters(
-                BgpExtendedMessageUtil.EXTENDED_MESSAGE_CAPABILITY).build());
-        params.add(new BgpParametersBuilder().setOptionalCapabilities(capas).build());
-        final Open open1 = new OpenBuilder().setBgpParameters(params).build();
-        assertEquals(true, BgpExtendedMessageUtil.advertizedBgpExtendedMessageCapability(open1));
-    }
-
     @Test(expected=UnsupportedOperationException.class)
     public void testAsNumberUtilPrivateConstructor() throws Throwable {
         final Constructor<AsNumberUtil> c = AsNumberUtil.class.getDeclaredConstructor();
         c.setAccessible(true);
         try {
             c.newInstance();
-        } catch (final InvocationTargetException e) {
+        } catch (InvocationTargetException e) {
             throw e.getCause();
         }
     }

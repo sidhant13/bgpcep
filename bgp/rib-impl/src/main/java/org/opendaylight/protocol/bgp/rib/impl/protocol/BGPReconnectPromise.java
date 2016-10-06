@@ -22,6 +22,8 @@ import io.netty.util.concurrent.Promise;
 import java.net.InetSocketAddress;
 import org.opendaylight.protocol.bgp.rib.impl.spi.ChannelPipelineInitializer;
 import org.opendaylight.protocol.bgp.rib.spi.BGPSession;
+import org.opendaylight.protocol.framework.ReconnectStrategy;
+import org.opendaylight.protocol.framework.ReconnectStrategyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,24 +31,26 @@ public class BGPReconnectPromise<S extends BGPSession> extends DefaultPromise<Vo
     private static final Logger LOG = LoggerFactory.getLogger(BGPReconnectPromise.class);
 
     private final InetSocketAddress address;
-    private final int retryTimer;
+    private final ReconnectStrategyFactory strategyFactory;
     private final Bootstrap bootstrap;
     private final ChannelPipelineInitializer initializer;
     private BGPProtocolSessionPromise<S> pending;
 
     public BGPReconnectPromise(final EventExecutor executor, final InetSocketAddress address,
-                               final int retryTimer, final Bootstrap bootstrap,
+                               final ReconnectStrategyFactory connectStrategyFactory, final Bootstrap bootstrap,
                                final ChannelPipelineInitializer initializer) {
         super(executor);
         this.bootstrap = bootstrap;
         this.initializer = Preconditions.checkNotNull(initializer);
         this.address = Preconditions.checkNotNull(address);
-        this.retryTimer = retryTimer;
+        this.strategyFactory = Preconditions.checkNotNull(connectStrategyFactory);
     }
 
     public synchronized void connect() {
+        final ReconnectStrategy reconnectStrategy = this.strategyFactory.createReconnectStrategy();
+
         // Set up a client with pre-configured bootstrap, but add a closed channel handler into the pipeline to support reconnect attempts
-        this.pending = connectSessionPromise(this.address, this.retryTimer, this.bootstrap, new ChannelPipelineInitializer<S>() {
+        this.pending = connectSessionPromise(this.address, reconnectStrategy, this.bootstrap, new ChannelPipelineInitializer<S>() {
             @Override
             public void initializeChannel(final SocketChannel channel, final Promise<S> promise) {
                 BGPReconnectPromise.this.initializer.initializeChannel(channel, promise);
@@ -68,9 +72,9 @@ public class BGPReconnectPromise<S extends BGPSession> extends DefaultPromise<Vo
         });
     }
 
-    public BGPProtocolSessionPromise<S> connectSessionPromise(final InetSocketAddress address, final int retryTimer, final Bootstrap bootstrap,
+    public BGPProtocolSessionPromise<S> connectSessionPromise(final InetSocketAddress address, final ReconnectStrategy strategy, final Bootstrap bootstrap,
                                   final ChannelPipelineInitializer initializer) {
-        final BGPProtocolSessionPromise sessionPromise = new BGPProtocolSessionPromise(address, retryTimer, bootstrap);
+        final BGPProtocolSessionPromise sessionPromise = new BGPProtocolSessionPromise(address, strategy, bootstrap);
         final ChannelHandler chInit = new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(final SocketChannel channel) {
