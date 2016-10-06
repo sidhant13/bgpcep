@@ -18,13 +18,18 @@ import org.opendaylight.controller.config.api.jmx.CommitStatus;
 import org.opendaylight.controller.config.spi.ModuleFactory;
 import org.opendaylight.controller.config.util.ConfigTransactionJMXClient;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.ApplicationRibId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.BgpId;
 
 public class BGPApplicationPeerModuleTest extends AbstractRIBImplModuleTest {
 
+    private static final int EXP_INSTANCES = 8;
     private static final String INSTANCE_NAME = "application-peer-instance";
     private static final String FACTORY_NAME = BGPApplicationPeerModuleFactory.NAME;
     private static final ApplicationRibId APP_RIB_ID = new ApplicationRibId("application-peer-test");
     private static final ApplicationRibId NEW_APP_RIB_ID = new ApplicationRibId("new-application-peer-name");
+
+    private ObjectName dataBroker = null;
+    private ObjectName ribModule = null;
 
     @Override
     protected List<ModuleFactory> getModuleFactories() {
@@ -37,7 +42,7 @@ public class BGPApplicationPeerModuleTest extends AbstractRIBImplModuleTest {
     public void testCreateInstance() throws Exception {
         final CommitStatus status = createApplicationPeerInstance();
         assertBeanCount(1, FACTORY_NAME);
-        assertStatus(status, 14, 0, 0);
+        assertStatus(status, EXP_INSTANCES, 0, 0);
     }
 
     @Test
@@ -47,7 +52,7 @@ public class BGPApplicationPeerModuleTest extends AbstractRIBImplModuleTest {
         assertBeanCount(1, FACTORY_NAME);
         final CommitStatus status = transaction.commit();
         assertBeanCount(1, FACTORY_NAME);
-        assertStatus(status, 0, 0, 14);
+        assertStatus(status, 0, 0, EXP_INSTANCES);
     }
 
     @Test
@@ -60,19 +65,29 @@ public class BGPApplicationPeerModuleTest extends AbstractRIBImplModuleTest {
         mxBean.setApplicationRibId(new ApplicationRibId(NEW_APP_RIB_ID));
         final CommitStatus status = transaction.commit();
         assertBeanCount(1, FACTORY_NAME);
-        assertStatus(status, 0, 1, 13);
+        assertStatus(status, 0, 1, EXP_INSTANCES - 1);
         assertEquals(NEW_APP_RIB_ID, getApplicationRibId());
     }
 
     private CommitStatus createApplicationPeerInstance() throws Exception {
+        return createApplicationPeerInstance(INSTANCE_NAME);
+    }
+
+    private CommitStatus createApplicationPeerInstance(final String instanceName) throws Exception {
         final ConfigTransactionJMXClient transaction = this.configRegistryClient.createTransaction();
-        final ObjectName objName = transaction.createModule(BGPApplicationPeerModuleFactory.NAME, INSTANCE_NAME);
+        final ObjectName objName = transaction.createModule(BGPApplicationPeerModuleFactory.NAME, instanceName);
         final BGPApplicationPeerModuleMXBean mxBean = transaction.newMXBeanProxy(objName, BGPApplicationPeerModuleMXBean.class);
         final ObjectName dataBrokerON = lookupDomAsyncDataBroker(transaction);
         mxBean.setDataBroker(dataBrokerON);
-        mxBean.setBgpPeerId(BGP_ID);
+        mxBean.setBgpPeerId(new BgpId(BGP_ID));
         mxBean.setApplicationRibId(APP_RIB_ID);
-        mxBean.setTargetRib(createRIBImplModuleInstance(transaction, createAsyncDataBrokerInstance(transaction)));
+        if (this.dataBroker == null) {
+            this.dataBroker = createAsyncDataBrokerInstance(transaction);
+        }
+        if (this.ribModule == null) {
+            this.ribModule = createRIBImplModuleInstance(transaction, this.dataBroker);
+        }
+        mxBean.setTargetRib(this.ribModule);
         return transaction.commit();
     }
 

@@ -7,7 +7,6 @@
  */
 package org.opendaylight.protocol.bgp.rib.impl;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.List;
@@ -25,49 +24,46 @@ import org.slf4j.LoggerFactory;
 /**
  * Listener for the client.
  */
-public class SimpleSessionListener implements BGPSessionListener {
-
-    private final List<Notification> listMsg = Lists.newArrayList();
-
-    public boolean up = false;
+public final class SimpleSessionListener implements BGPSessionListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(SimpleSessionListener.class);
-
-    public boolean down = false;
-
+    private final List<Notification> listMsg = Lists.newArrayList();
     private BGPSession session;
-
-    public SimpleSessionListener() {
-    }
-
-    public List<Notification> getListMsg() {
-        return this.listMsg;
-    }
     private final CountDownLatch sessionLatch = new CountDownLatch(1);
 
+    SimpleSessionListener() {
+    }
+
+    List<Notification> getListMsg() {
+        return this.listMsg;
+    }
+
     @Override
-    public void onMessage(final BGPSession session, final Notification message) {
-        this.listMsg.add(message);
-        LOG.debug("Message received: {}", message);
+    public void markUptodate(final TablesKey tablesKey) {
+        LOG.debug("Table marked as up-to-date {}", tablesKey);
     }
 
     @Override
     public void onSessionUp(final BGPSession session) {
-        LOG.debug("Session Up");
+        LOG.info("Session Up");
         this.session = session;
-        this.up = true;
-        sessionLatch.countDown();
+        this.sessionLatch.countDown();
     }
 
     @Override
     public void onSessionDown(final BGPSession session, final Exception e) {
         LOG.debug("Session Down", e);
-        this.down = true;
     }
 
     @Override
     public void onSessionTerminated(final BGPSession session, final BGPTerminationReason cause) {
         LOG.debug("Session terminated. Cause : {}", cause.toString());
+    }
+
+    @Override
+    public void onMessage(final BGPSession session, final Notification message) {
+        this.listMsg.add(message);
+        LOG.debug("Message received: {}", message);
     }
 
     @Override
@@ -79,26 +75,15 @@ public class SimpleSessionListener implements BGPSessionListener {
             } catch (final Exception e) {
                 LOG.warn("Error closing session", e);
             }
-            this.session = null;
         }
     }
 
-    @Override
-    public boolean isSessionActive() {
-        return true;
+    BGPSessionImpl.State getState() {
+        return getSession().getState();
     }
 
-    @Override
-    public void markUptodate(final TablesKey tablesKey) {
-        LOG.debug("Table marked as up-to-date {}", tablesKey);
-    }
-
-    public boolean isUp() {
-        Preconditions.checkNotNull(getSession());
-        return up;
-    }
-    public BGPSessionImpl getSession() {
-        Assert.assertEquals("Session up", true, Uninterruptibles.awaitUninterruptibly(sessionLatch, 10, TimeUnit.SECONDS));
+    BGPSessionImpl getSession() {
+        Assert.assertEquals("Session up", true, Uninterruptibles.awaitUninterruptibly(this.sessionLatch, 10, TimeUnit.SECONDS));
         return (BGPSessionImpl) this.session;
     }
 }

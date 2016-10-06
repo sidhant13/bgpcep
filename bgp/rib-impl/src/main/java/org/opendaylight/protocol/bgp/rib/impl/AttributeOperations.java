@@ -13,25 +13,17 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-
 import org.opendaylight.protocol.util.Values;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.AsNumber;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.ClusterId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.OriginatorId;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.AsPath;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.ClusterId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Communities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.ExtendedCommunities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Origin;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.Qos;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.OriginatorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.UnrecognizedAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.as.path.Segments;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.qos.QosStlv;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.path.attributes.attributes.qos.QosStlvBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.ClusterIdentifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.next.hop.CNextHop;
 import org.opendaylight.yangtools.yang.common.QName;
@@ -43,8 +35,6 @@ import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.PathArgum
 import org.opendaylight.yangtools.yang.data.api.schema.ContainerNode;
 import org.opendaylight.yangtools.yang.data.api.schema.DataContainerChild;
 import org.opendaylight.yangtools.yang.data.api.schema.LeafNode;
-//import org.opendaylight.yangtools.yang.data.api.schema.DataContainerNode;
-//import org.opendaylight.yangtools.yang.data.api.schema.LeafNode;
 import org.opendaylight.yangtools.yang.data.api.schema.LeafSetEntryNode;
 import org.opendaylight.yangtools.yang.data.api.schema.LeafSetNode;
 import org.opendaylight.yangtools.yang.data.api.schema.NormalizedNode;
@@ -56,7 +46,6 @@ import org.opendaylight.yangtools.yang.data.impl.schema.ImmutableNodes;
 import org.opendaylight.yangtools.yang.data.impl.schema.builder.api.CollectionNodeBuilder;
 import org.opendaylight.yangtools.yang.data.impl.schema.builder.api.DataContainerNodeAttrBuilder;
 import org.opendaylight.yangtools.yang.data.impl.schema.builder.api.ListNodeBuilder;
-import org.opendaylight.yangtools.yang.data.impl.schema.builder.api.NormalizedNodeAttrBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,15 +88,6 @@ final class AttributeOperations {
     private final NodeIdentifier asPathSequence;
     private final QName asNumberQname;
     private final NodeIdentifier transitiveLeaf;
-    private final NodeIdentifier unrecognizedAttrList;
-    private final NodeIdentifier unrecognizedAttrValue;
-    private final NodeIdentifier unrecognizedAttrType;
-    private final NodeIdentifier qosStlvContainer;
-    private final NodeIdentifier qosStlvContainerLeaf;
-    private final Iterable<PathArgument> qosStlvContMetricPath;
-    private final NodeIdentifier qosContainer;
-    private NodeIdentifier prefixQname;
-
 
     private AttributeOperations(final QNameModule namespace) {
         this.asPathContainer = new NodeIdentifier(QName.create(namespace, AsPath.QNAME.getLocalName()).intern());
@@ -123,16 +103,7 @@ final class AttributeOperations {
         this.originatorIdLeaf = new NodeIdentifier(QName.create(namespace, "originator").intern());
         this.originatorIdPath = ImmutableList.<PathArgument>of(this.originatorIdContainer, this.originatorIdLeaf);
 
-        this.qosContainer= new NodeIdentifier(QName.create(namespace, Qos.QNAME.getLocalName()).intern());
-        this.qosStlvContainer= new NodeIdentifier(QName.create(namespace, QosStlv.QNAME.getLocalName()).intern());
-        this.qosStlvContainerLeaf= new NodeIdentifier(QName.create(namespace, "metric").intern());
-        this.qosStlvContMetricPath = ImmutableList.<PathArgument>of(this.qosStlvContainer, this.qosStlvContainerLeaf);
-
         this.transitiveLeaf = new NodeIdentifier(QName.create(UnrecognizedAttributes.QNAME, "transitive").intern());
-        this.unrecognizedAttrList= new NodeIdentifier(QName.create(namespace, UnrecognizedAttributes.QNAME.getLocalName()).intern());
-        this.unrecognizedAttrValue= new NodeIdentifier(QName.create(namespace, "value").intern());
-        this.unrecognizedAttrType= new NodeIdentifier(QName.create(namespace, "type").intern());
-        this.prefixQname= new NodeIdentifier(QName.create(namespace, "prefix").intern());
         this.transitiveCollection = TRANSITIVE_CACHE.getUnchecked(namespace);
     }
 
@@ -154,6 +125,7 @@ final class AttributeOperations {
     ContainerNode exportedAttributes(final ContainerNode attributes, final Long localAs) {
         final DataContainerNodeAttrBuilder<NodeIdentifier, ContainerNode> containerBuilder = Builders.containerBuilder();
         containerBuilder.withNodeIdentifier(attributes.getIdentifier());
+
         // First filter out non-transitive attributes
         // FIXME: removes MULTI_EXIT_DISC, too.
         spliceTransitives(containerBuilder, attributes);
@@ -206,81 +178,6 @@ final class AttributeOperations {
 
         containerBuilder.withChild(Builders.containerBuilder().withNodeIdentifier(this.asPathContainer).withChild(segmentsBuilder.build()).build());
         return containerBuilder.build();
-    }
-
-    public Optional<List<AsNumber>> getAsList(ContainerNode attributes) {
-        List<AsNumber> asl= new ArrayList<>();
-
-        final Optional<NormalizedNode<?, ?>> maybeOldAsSegments = NormalizedNodes.findNode(attributes, this.asPathContainer, this.asPathSegments);
-        if (maybeOldAsSegments.isPresent() && !((UnkeyedListNode) maybeOldAsSegments.get()).getValue().isEmpty()) {
-
-            final Iterator<UnkeyedListEntryNode> oldAsSegments = ((UnkeyedListNode) maybeOldAsSegments.get()).getValue().iterator();
-            final UnkeyedListEntryNode firstSegment = oldAsSegments.next();
-            final LeafSetNode<?> reusableAsSeq = reusableSegment(firstSegment);
-            if(reusableAsSeq!=null){
-                for (final LeafSetEntryNode<?> child : reusableAsSeq.getValue())  {
-                    asl.add(new AsNumber( (Long) child.getValue()));
-                }
-                return Optional.fromNullable(asl);
-            }
-            else
-                return Optional.absent();
-        }
-        return Optional.absent();
-    }
-
-    Optional<QosStlvBuilder> getQosAttributeStlv(ContainerNode attributes) {
-        QosStlvBuilder qosStlvBuilder= new QosStlvBuilder();
-
-        final Optional<NormalizedNode<?, ?>> maybeQosStlvMetric = NormalizedNodes.findNode(attributes, this.qosContainer, this.qosStlvContainer, this.qosStlvContainerLeaf );
-        if (maybeQosStlvMetric.isPresent() && !((LeafSetNode<?>) maybeQosStlvMetric.get()).getValue().isEmpty()) {
-            //LOG.info("{}",maybeQosStlvMetric.get());
-            final Iterator<LeafSetEntryNode<?>>  metricList= ((LeafSetNode) maybeQosStlvMetric.get()).getValue().iterator();
-            List<String> metricStringList= new ArrayList<>();
-            while(metricList.hasNext()){
-                String metric= (String)metricList.next().getValue();
-                metricStringList.add(metric);
-            }
-            if(!metricStringList.isEmpty()){
-                qosStlvBuilder.setMetric(metricStringList);
-                return Optional.fromNullable(qosStlvBuilder);
-            }
-        }
-        return Optional.absent();
-    }
-
-    ContainerNode getBindingIndependentAttr(ContainerNode effectiveAttributes, QosStlv qosStlv) {
-        ContainerNode stlvCon=getStlvContainer(qosStlv);
-        //LOG.info("{}",stlvCon);
-        DataContainerNodeAttrBuilder<NodeIdentifier, ContainerNode> qosContainer = Builders.containerBuilder();
-        qosContainer.withNodeIdentifier(this.qosContainer);
-        qosContainer.withChild(stlvCon);
-        DataContainerNodeAttrBuilder<NodeIdentifier, ContainerNode> attributesContainer = Builders.containerBuilder(effectiveAttributes);
-        //LOG.info("{}",attributesContainer.build());
-        attributesContainer.withChild(qosContainer.build());
-        //LOG.info("{}",attributesContainer.build());
-        return attributesContainer.build();
-    }
-
-    ContainerNode getStlvContainer(QosStlv qosStlv){
-        final DataContainerNodeAttrBuilder<NodeIdentifier, ContainerNode> attributesContainer = Builders.containerBuilder();
-        attributesContainer.withNodeIdentifier(this.qosStlvContainer);
-        final ListNodeBuilder<Object, LeafSetEntryNode<Object>> metricListBuilder = Builders.leafSetBuilder();
-        metricListBuilder.withNodeIdentifier(this.qosStlvContainerLeaf);
-        //LOG.info("{}",metricListBuilder.toString());
-        //LOG.info("{}",metricListBuilder.build());
-
-        for(Object metric: qosStlv.getMetric()){
-            NormalizedNodeAttrBuilder<NodeWithValue, Object, LeafSetEntryNode<Object>> child = Builders.leafSetEntryBuilder();
-            NodeWithValue<Object> asd= new NodeWithValue<Object>(this.qosStlvContainerLeaf.getNodeType(), (Object)metric);
-            child.withNodeIdentifier(asd);
-            child.withValue((Object)metric);
-            //LOG.info("{}",child.build());
-            //LeafSetEntryNode<Object> child = (LeafSetEntryNode<Object>) metric;
-            metricListBuilder.addChild(child.build());
-        }
-        attributesContainer.withChild(metricListBuilder.build());
-        return attributesContainer.build();
     }
 
     /**
@@ -342,6 +239,7 @@ final class AttributeOperations {
             originatorIDBuilder.withChild(ImmutableNodes.leafNode(this.originatorIdLeaf, originatorId.getValue()));
             attributesContainer.withChild(originatorIDBuilder.build());
         }
+
         return attributesContainer.build();
     }
 
@@ -443,30 +341,3 @@ final class AttributeOperations {
         return null;
     }
 }
-/*
-Optional<byte[]> getQosAttributeValue(ContainerNode attributes) {
-    final Optional<NormalizedNode<?, ?>> maybeOptionalAttr = NormalizedNodes.findNode(attributes, this.qosStlvContainer);
-
-    if (maybeOptionalAttr.isPresent() ) {
-        final Collection<MapEntryNode> optionalAttrs = ((MapNode) maybeOptionalAttr.get()).getValue();
-        for(MapEntryNode optionalAttr : optionalAttrs){
-            if(targetAttributeType == ((Short) optionalAttr.getIdentifier().getKeyValues().get(unrecognizedAttrType.getNodeType()))){
-                Optional<DataContainerChild<? extends PathArgument, ?>> maybeValue = optionalAttr.getChild(unrecognizedAttrValue);
-                if(maybeValue.isPresent()){
-                    return Optional.fromNullable((byte[])(maybeValue.get().getValue()));
-                }
-                /*for(DataContainerChild<? extends PathArgument, ?> child : optionalAttr.getValue() ){
-                    LOG.info("{}",child.getIdentifier());
-                }
-                //optionalAttr.ge
-                LOG.info("{}",unrecognizedAttrValue);
-                Map<QName, Object> map =optionalAttr.getIdentifier().getKeyValues();
-                for(Map.Entry<QName, Object> entry : map.entrySet())
-                    LOG.info("{  {} {}",entry.getKey(), entry.getValue(), unrecognizedAttrType);
-            }
-        }
-        //unrecognizedAttrValue.
-    }
-    return Optional.absent();
-}
-*/

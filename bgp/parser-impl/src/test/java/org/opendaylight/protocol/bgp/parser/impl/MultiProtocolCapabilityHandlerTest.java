@@ -9,6 +9,7 @@
 package org.opendaylight.protocol.bgp.parser.impl;
 
 import static org.junit.Assert.assertEquals;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Before;
@@ -25,7 +26,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.mess
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.message.rev130919.open.message.bgp.parameters.optional.capabilities.CParametersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.CParameters1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.CParameters1Builder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.open.bgp.parameters.optional.capabilities.c.parameters.MultiprotocolCapabilityBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.mp.capabilities.MultiprotocolCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv6AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.UnicastSubsequentAddressFamily;
 
@@ -37,7 +38,6 @@ public class MultiProtocolCapabilityHandlerTest {
     private final static Class safi = UnicastSubsequentAddressFamily.class;
     @Mock private SubsequentAddressFamilyRegistry safir;
     @Mock private SubsequentAddressFamilyRegistry safirException;
-    private final ByteBuf serializedBytes = Unpooled.copiedBuffer(new byte[] {1, 4, 1, 4, 0, 4});
 
     @Before
     public void setUp() {
@@ -66,20 +66,6 @@ public class MultiProtocolCapabilityHandlerTest {
         final CParameters newCaps = handler.parseCapability(bytes);
 
         assertEquals(capabilityToSerialize.hashCode(), newCaps.hashCode());
-    }
-
-    @Test(expected=BGPParsingException.class)
-    public void testAfiException() throws BGPDocumentedException, BGPParsingException {
-        final ByteBuf bytes = this.serializedBytes.copy();
-        final MultiProtocolCapabilityHandler handler = new MultiProtocolCapabilityHandler(this.afirExpection, this.safir);
-        handler.parseCapability(bytes);
-    }
-
-    @Test(expected=BGPParsingException.class)
-    public void testSafiException() throws BGPDocumentedException, BGPParsingException {
-        final ByteBuf bytes = this.serializedBytes.copy();
-        final MultiProtocolCapabilityHandler handler = new MultiProtocolCapabilityHandler(this.afir, this.safirException);
-        handler.parseCapability(bytes);
     }
 
     @Test(expected=IllegalArgumentException.class)

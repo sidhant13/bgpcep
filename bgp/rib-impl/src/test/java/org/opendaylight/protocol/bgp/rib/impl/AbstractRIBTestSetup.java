@@ -7,11 +7,15 @@
  */
 package org.opendaylight.protocol.bgp.rib.impl;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.CheckedFuture;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,27 +28,30 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
+import org.opendaylight.controller.md.sal.dom.api.ClusteredDOMDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataBroker;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataBrokerExtension;
-import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeChangeService;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeIdentifier;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataWriteTransaction;
 import org.opendaylight.controller.md.sal.dom.api.DOMTransactionChain;
+import org.opendaylight.mdsal.binding.dom.codec.api.BindingCodecTreeFactory;
+import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
+import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
+import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegistration;
+import org.opendaylight.protocol.bgp.inet.RIBActivator;
+import org.opendaylight.protocol.bgp.mode.impl.base.BasePathSelectionModeFactory;
 import org.opendaylight.protocol.bgp.parser.BgpTableTypeImpl;
 import org.opendaylight.protocol.bgp.rib.impl.spi.BGPDispatcher;
 import org.opendaylight.protocol.bgp.rib.spi.RIBExtensionProviderContext;
 import org.opendaylight.protocol.bgp.rib.spi.RIBSupport;
 import org.opendaylight.protocol.bgp.rib.spi.SimpleRIBExtensionProviderContext;
-import org.opendaylight.protocol.framework.ReconnectStrategyFactory;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.AsNumber;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.AsNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.inet.rev150305.ipv4.routes.ipv4.routes.Ipv4Route;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.BgpTableType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.BgpRib;
@@ -52,10 +59,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.bgp.rib.Rib;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.TablesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.AddressFamily;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.BgpId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.ClusterIdentifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv4AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.SubsequentAddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.UnicastSubsequentAddressFamily;
-import org.opendaylight.yangtools.binding.data.codec.api.BindingCodecTreeFactory;
 import org.opendaylight.yangtools.binding.data.codec.gen.impl.DataObjectSerializerGenerator;
 import org.opendaylight.yangtools.binding.data.codec.gen.impl.StreamWriterGenerator;
 import org.opendaylight.yangtools.binding.data.codec.impl.BindingNormalizedNodeCodecRegistry;
@@ -68,6 +76,7 @@ import org.opendaylight.yangtools.sal.binding.generator.util.JavassistUtils;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.util.BindingReflections;
+import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.NodeIdentifier;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.NodeIdentifierWithPredicates;
@@ -85,23 +94,20 @@ import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 public class AbstractRIBTestSetup {
 
     private RIBImpl rib;
-    private final Ipv4Address clusterId = new Ipv4Address("128.0.0.1");
-    private final Ipv4Address ribId = new Ipv4Address("127.0.0.1");
-    static final Class<? extends AddressFamily> AFI = Ipv4AddressFamily.class;
-    static final Class<? extends SubsequentAddressFamily> SAFI = UnicastSubsequentAddressFamily.class;
-    static final TablesKey KEY = new TablesKey(AFI, SAFI);
+    private static final ClusterIdentifier CLUSTER_ID = new ClusterIdentifier("128.0.0.1");
+    private static final BgpId RIB_ID = new BgpId("127.0.0.1");
+    protected static final Class<? extends AddressFamily> AFI = Ipv4AddressFamily.class;
+    protected static final Class<? extends SubsequentAddressFamily> SAFI = UnicastSubsequentAddressFamily.class;
+    protected static final QName AFI_QNAME = BindingReflections.findQName(AFI).intern();
+    protected static final QName SAFI_QNAME = BindingReflections.findQName(SAFI).intern();
+    protected static final TablesKey KEY = new TablesKey(AFI, SAFI);
     private BindingCodecTreeFactory codecFactory;
     private RIBActivator a1;
-    RIBSupport ribSupport;
+    private RIBSupport ribSupport;
+    protected static final QName PREFIX_QNAME = QName.create(Ipv4Route.QNAME, "prefix").intern();
 
     @Mock
     private BGPDispatcher dispatcher;
-
-    @Mock
-    private ReconnectStrategyFactory tcpStrategyFactory;
-
-    @Mock
-    private DataBroker dps;
 
     @Mock
     private DOMDataBroker dom;
@@ -127,6 +133,9 @@ public class AbstractRIBTestSetup {
     @Mock
     private DOMDataTreeChangeService service;
 
+    @Mock
+    private ClusterSingletonServiceProvider clusterSingletonServiceProvider;
+
     @Before
     public void setUp() throws Exception {
         mockRib();
@@ -139,11 +148,15 @@ public class AbstractRIBTestSetup {
         this.codecFactory = createCodecFactory(strategy,schemaContext);
         final List<BgpTableType> localTables = new ArrayList<>();
         localTables.add(new BgpTableTypeImpl(AFI, SAFI));
+
         this.a1 = new RIBActivator();
         this.a1.startRIBExtensionProvider(context);
         mockedMethods();
-        this.rib = new RIBImpl(new RibId("test"), new AsNumber(5L), this.ribId,
-            this.clusterId, context , this.dispatcher, this.tcpStrategyFactory, this.codecFactory, this.tcpStrategyFactory, this.dps, this.dom, localTables, GeneratedClassLoadingStrategy.getTCCLClassLoadingStrategy());
+        doReturn(Mockito.mock(ClusterSingletonServiceRegistration.class)).when(this.clusterSingletonServiceProvider)
+            .registerClusterSingletonService(any(ClusterSingletonService.class));
+        this.rib = new RIBImpl(this.clusterSingletonServiceProvider, new RibId("test"), new AsNumber(5L), RIB_ID, CLUSTER_ID, context,
+            this.dispatcher, this.codecFactory, this.dom, localTables, Collections.singletonMap(new TablesKey(AFI, SAFI),
+            BasePathSelectionModeFactory.createBestPathSelectionStrategy()), GeneratedClassLoadingStrategy.getTCCLClassLoadingStrategy(), null);
         this.rib.onGlobalContextUpdated(schemaContext);
         this.ribSupport = getRib().getRibSupportContext().getRIBSupportContext(KEY).getRibSupport();
     }
@@ -169,18 +182,16 @@ public class AbstractRIBTestSetup {
     private void mockedMethods() throws Exception {
         MockitoAnnotations.initMocks(this);
         final ReadOnlyTransaction readTx = Mockito.mock(ReadOnlyTransaction.class);
-        Mockito.doReturn(new listenerRegistration()).when(this.service).registerDataTreeChangeListener(Mockito.any(DOMDataTreeIdentifier.class), Mockito.any(DOMDataTreeChangeListener.class));
+        Mockito.doReturn(new listenerRegistration()).when(this.service).registerDataTreeChangeListener(Mockito.any(DOMDataTreeIdentifier.class), Mockito.any(ClusteredDOMDataTreeChangeListener.class));
         final Map<Class<? extends DOMDataBrokerExtension>, DOMDataBrokerExtension> map = new HashMap<>();
         map.put(DOMDataTreeChangeService.class, this.service);
         Mockito.doNothing().when(readTx).close();
-        Mockito.doReturn(readTx).when(this.dps).newReadOnlyTransaction();
         final CheckedFuture<Optional<DataObject>, ReadFailedException> readFuture = Mockito.mock(CheckedFuture.class);
         Mockito.doNothing().when(this.domTransWrite).put(Mockito.eq(LogicalDatastoreType.OPERATIONAL), Mockito.any(YangInstanceIdentifier.class), Mockito.any(NormalizedNode.class));
         Mockito.doNothing().when(this.domTransWrite).delete(Mockito.eq(LogicalDatastoreType.OPERATIONAL), Mockito.any(YangInstanceIdentifier.class));
         Mockito.doNothing().when(this.domTransWrite).merge(Mockito.eq(LogicalDatastoreType.OPERATIONAL), Mockito.any(YangInstanceIdentifier.class), Mockito.any(NormalizedNode.class));
         Mockito.doReturn(Optional.<DataObject>absent()).when(readFuture).checkedGet();
         Mockito.doReturn(readFuture).when(readTx).read(Mockito.eq(LogicalDatastoreType.OPERATIONAL), Mockito.any(InstanceIdentifier.class));
-        Mockito.doReturn(this.chain).when(this.dps).createTransactionChain(Mockito.any(RIBImpl.class));
         Mockito.doNothing().when(this.domChain).close();
         Mockito.doReturn(this.domTransWrite).when(this.domChain).newWriteOnlyTransaction();
         Mockito.doNothing().when(getTransaction()).put(Mockito.eq(LogicalDatastoreType.OPERATIONAL), Mockito.eq(YangInstanceIdentifier.of(BgpRib.QNAME)), Mockito.any(NormalizedNode.class));
@@ -207,13 +218,13 @@ public class AbstractRIBTestSetup {
         Mockito.doCallRealMethod().when(candidate).toString();
         final Collection<DataTreeCandidateNode> children = new HashSet<>();
         for (final Ipv4Prefix p : prefix) {
-            final NodeIdentifierWithPredicates routekey = new NodeIdentifierWithPredicates(Ipv4Route.QNAME, IPv4RIBSupport.PREFIX_QNAME, p);
+            final NodeIdentifierWithPredicates routekey = new NodeIdentifierWithPredicates(Ipv4Route.QNAME, PREFIX_QNAME, p);
             final DataContainerNodeBuilder<NodeIdentifierWithPredicates, MapEntryNode> b = ImmutableNodes.mapEntryBuilder();
             b.withNodeIdentifier(routekey);
-            b.addChild(Builders.leafBuilder().withNodeIdentifier(new NodeIdentifier(IPv4RIBSupport.PREFIX_QNAME)).withValue(p).build());
+            b.addChild(Builders.leafBuilder().withNodeIdentifier(new NodeIdentifier(PREFIX_QNAME)).withValue(p).build());
 
             final DataTreeCandidateNode child = Mockito.mock(DataTreeCandidateNode.class);
-            Mockito.doReturn(createIdentifier(target, p)).when(child).getIdentifier();
+            Mockito.doReturn(createIdentifier(p)).when(child).getIdentifier();
             Mockito.doReturn(Optional.of(b.build())).when(child).getDataAfter();
             Mockito.doReturn(type).when(child).getModificationType();
             children.add(child);
@@ -223,9 +234,9 @@ public class AbstractRIBTestSetup {
         return col;
     }
 
-    public PathArgument createIdentifier(final YangInstanceIdentifier base, final Ipv4Prefix prefix) {
-        final NodeIdentifierWithPredicates routekey = new NodeIdentifierWithPredicates(Ipv4Route.QNAME, IPv4RIBSupport.PREFIX_QNAME, prefix);
-        return YangInstanceIdentifier.of(IPv4RIBSupport.PREFIX_QNAME).node(routekey).getLastPathArgument();
+    public PathArgument createIdentifier(final Ipv4Prefix prefix) {
+        final NodeIdentifierWithPredicates routekey = new NodeIdentifierWithPredicates(Ipv4Route.QNAME, PREFIX_QNAME, prefix);
+        return YangInstanceIdentifier.of(PREFIX_QNAME).node(routekey).getLastPathArgument();
     }
 
     public RIBImpl getRib() {
@@ -251,6 +262,7 @@ public class AbstractRIBTestSetup {
             return null;
         }
 
+        @Override
         public void close() {
         }
     }
