@@ -137,7 +137,7 @@ public class ParserToSalTest extends AbstractDataBrokerTest {
         final RIBImpl rib = new RIBImpl(new RibId(TEST_RIB_ID), new AsNumber(72L), new Ipv4Address("127.0.0.1"), null, this.ext2, this.dispatcher, this.tcpStrategyFactory, this.codecFactory, this.sessionStrategy, getDataBroker(), getDomBroker(), tables, GeneratedClassLoadingStrategy.getTCCLClassLoadingStrategy());
         assertTablesExists(tables, true);
         rib.onGlobalContextUpdated(this.schemaService.getGlobalContext());
-        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib);
+        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib, null);
 
         final ListenerRegistration<?> reg = this.mock.registerUpdateListener(peer);
         reg.close();
@@ -149,7 +149,7 @@ public class ParserToSalTest extends AbstractDataBrokerTest {
         final RIBImpl rib = new RIBImpl(new RibId(TEST_RIB_ID), new AsNumber(72L), new Ipv4Address("127.0.0.1"), null, this.ext1, this.dispatcher, this.tcpStrategyFactory, this.codecFactory, this.sessionStrategy, getDataBroker(), getDomBroker(), tables, GeneratedClassLoadingStrategy.getTCCLClassLoadingStrategy());
         rib.onGlobalContextUpdated(this.schemaService.getGlobalContext());
         assertTablesExists(tables, true);
-        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib);
+        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib, null);
 
         final ListenerRegistration<?> reg = this.mock.registerUpdateListener(peer);
         reg.close();

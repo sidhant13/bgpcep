@@ -57,6 +57,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.TablesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv4AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.UnicastSubsequentAddressFamily;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.Notification;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
 import org.slf4j.Logger;
@@ -90,17 +91,19 @@ public class BGPPeer implements BGPSessionListener, Peer, AutoCloseable, BGPPeer
     private long sessionEstablishedCounter = 0L;
     private final Set<AdjRibOutListener> adjRibOutListenerSet = new HashSet<>();
     private final PeerRole peerRole;
+    private final NodeId nodeid;
 
-    public BGPPeer(final String name, final RIB rib) {
-        this(name, rib, PeerRole.Ibgp);
+    public BGPPeer(final String name, final RIB rib, final NodeId nodeid) {
+        this(name, rib, PeerRole.Ibgp, nodeid);
     }
 
-    public BGPPeer(final String name, final RIB rib, final PeerRole role) {
+    public BGPPeer(final String name, final RIB rib, final PeerRole role, final NodeId nodeid) {
         this.rib = Preconditions.checkNotNull(rib);
         this.name = name;
         this.chain = rib.createPeerChain(this);
         this.peerRole = role;
-        this.ribWriter = AdjRibInWriter.create(rib.getYangRibId(), role, this.chain);
+        this.nodeid= nodeid;
+        this.ribWriter = AdjRibInWriter.create(rib.getYangRibId(), role, this.chain, nodeid);
     }
 
     @Override

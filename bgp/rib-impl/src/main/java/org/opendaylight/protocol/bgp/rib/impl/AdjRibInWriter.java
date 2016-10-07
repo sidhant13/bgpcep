@@ -8,6 +8,7 @@
 package org.opendaylight.protocol.bgp.rib.impl;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -36,6 +37,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.Tables;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.TablesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.tables.Attributes;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.InstanceIdentifierBuilder;
@@ -65,11 +67,13 @@ final class AdjRibInWriter {
     @VisibleForTesting
     static final QName PEER_ID_QNAME = QName.create(Peer.QNAME, "peer-id").intern();
     private static final QName PEER_ROLE_QNAME = QName.create(Peer.QNAME, "peer-role").intern();
+    private static final QName PEER_NODEID_QNAME = QName.create(Peer.QNAME, "node-id").intern();
     private static final NodeIdentifier ADJRIBIN = new NodeIdentifier(AdjRibIn.QNAME);
     private static final NodeIdentifier ADJRIBOUT = new NodeIdentifier(AdjRibOut.QNAME);
     private static final NodeIdentifier EFFRIBIN = new NodeIdentifier(EffectiveRibIn.QNAME);
     private static final NodeIdentifier PEER_ID = new NodeIdentifier(PEER_ID_QNAME);
     private static final NodeIdentifier PEER_ROLE = new NodeIdentifier(PEER_ROLE_QNAME);
+    private static final NodeIdentifier PEER_NODEID = new NodeIdentifier(PEER_NODEID_QNAME);
     private static final NodeIdentifier PEER_TABLES = new NodeIdentifier(SupportedTables.QNAME);
     private static final NodeIdentifier TABLES = new NodeIdentifier(Tables.QNAME);
 
@@ -84,14 +88,16 @@ final class AdjRibInWriter {
     private final DOMTransactionChain chain;
     private final PeerId peerId;
     private final String role;
+    private final Optional<NodeId> maybeNodeid;
 
-    private AdjRibInWriter(final YangInstanceIdentifier ribPath, final DOMTransactionChain chain, final PeerId peerId, final String role, final YangInstanceIdentifier peerPath, final Map<TablesKey, TableContext> tables) {
+    private AdjRibInWriter(final YangInstanceIdentifier ribPath, final DOMTransactionChain chain, final PeerId peerId, final String role, final YangInstanceIdentifier peerPath, final Map<TablesKey, TableContext> tables, NodeId nodeId) {
         this.ribPath = Preconditions.checkNotNull(ribPath);
         this.chain = Preconditions.checkNotNull(chain);
         this.tables = Preconditions.checkNotNull(tables);
         this.role = Preconditions.checkNotNull(role);
         this.peerPath = peerPath;
         this.peerId = peerId;
+        this.maybeNodeid= Optional.fromNullable(nodeId);
     }
 
     // We could use a codec, but this should be fine, too
@@ -118,7 +124,10 @@ final class AdjRibInWriter {
      * @return A fresh writer instance
      */
     static AdjRibInWriter create(@Nonnull final YangInstanceIdentifier ribId, @Nonnull final PeerRole role, @Nonnull final DOMTransactionChain chain) {
-        return new AdjRibInWriter(ribId, chain, null, roleString(role), null, Collections.<TablesKey, TableContext>emptyMap());
+        return new AdjRibInWriter(ribId, chain, null, roleString(role), null, Collections.<TablesKey, TableContext>emptyMap(),null);
+    }
+    static AdjRibInWriter create(@Nonnull final YangInstanceIdentifier ribId, @Nonnull final PeerRole role, @Nonnull final DOMTransactionChain chain, NodeId nodeId) {
+        return new AdjRibInWriter(ribId, chain, null, roleString(role), null, Collections.<TablesKey, TableContext>emptyMap(), nodeId);
     }
 
     /**
@@ -129,6 +138,7 @@ final class AdjRibInWriter {
      * @param newPeerId new peer BGP identifier
      * @param registry RIB extension registry
      * @param tableTypes New tables, must not be null
+     * @param nodeid
      * @return New writer
      */
     AdjRibInWriter transform(final PeerId newPeerId, final RIBSupportContextRegistry registry, final Set<TablesKey> tableTypes, final boolean isAppPeer) {
@@ -139,7 +149,7 @@ final class AdjRibInWriter {
         final ImmutableMap<TablesKey, TableContext> tb = createNewTableInstances(newPeerPath, isAppPeer, registry, tableTypes, tx);
         tx.submit();
 
-        return new AdjRibInWriter(this.ribPath, this.chain, newPeerId, this.role, newPeerPath, tb);
+        return new AdjRibInWriter(this.ribPath, this.chain, newPeerId, this.role, newPeerPath, tb,null);
     }
 
     /**
@@ -211,6 +221,8 @@ final class AdjRibInWriter {
         pb.withNodeIdentifier(peerKey);
         pb.withChild(ImmutableNodes.leafNode(PEER_ID, peerId));
         pb.withChild(ImmutableNodes.leafNode(PEER_ROLE, this.role));
+        if(maybeNodeid.isPresent())
+            pb.withChild(ImmutableNodes.leafNode(PEER_NODEID, maybeNodeid.get().getValue()));
         pb.withChild(ImmutableMapNodeBuilder.create().withNodeIdentifier(PEER_TABLES).build());
         pb.withChild(EMPTY_ADJRIBIN);
         pb.withChild(EMPTY_EFFRIBIN);
@@ -268,5 +280,7 @@ final class AdjRibInWriter {
         ctx.removeRoutes(tx, nlri);
         tx.submit();
     }
+
+
 
 }
