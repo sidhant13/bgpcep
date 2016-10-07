@@ -45,7 +45,7 @@ public interface BGPOpenConfigMappingService {
 
     Neighbor fromBgpPeer(List<AddressFamilies> addPathCapabilities,
             List<BgpTableType> advertisedTables, Integer holdTimer, IpAddress ipAddress, Boolean isActive,
-            Rfc2385Key password, PortNumber portNumber, Integer retryTimer, AsNumber remoteAs, PeerRole peerRole, SimpleRoutingPolicy simpleRoutingPolicy);
+            Rfc2385Key password, PortNumber portNumber, Integer retryTimer, AsNumber remoteAs, PeerRole peerRole, SimpleRoutingPolicy simpleRoutingPolicy, String nodeid);
 
     Neighbor fromApplicationPeer(ApplicationRibId applicationRibId, BgpId bgpId);
 }

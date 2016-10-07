@@ -212,7 +212,7 @@ public final class BgpPeer implements PeerBean, BGPPeerRuntimeMXBean {
             final WriteConfiguration configurationWriter) {
             this.neighborAddress = neighbor.getNeighborAddress();
             this.bgpPeer = new BGPPeer(Ipv4Util.toStringIP(this.neighborAddress), rib,
-                    mappingService.toPeerRole(neighbor), getSimpleRoutingPolicy(neighbor), BgpPeer.this.rpcRegistry);
+                    mappingService.toPeerRole(neighbor), getSimpleRoutingPolicy(neighbor), BgpPeer.this.rpcRegistry, neighbor.getNodeid());
             final List<BgpParameters> bgpParameters = getBgpParameters(neighbor, rib, mappingService);
             final KeyMapping keyMapping = OpenConfigMappingUtil.getNeighborKey(neighbor);
             this.prefs = new BGPSessionPreferences(rib.getLocalAs(), getHoldTimer(neighbor), rib.getBgpIdentifier(), getPeerAs(neighbor, rib),

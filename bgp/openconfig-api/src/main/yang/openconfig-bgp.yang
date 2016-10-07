@@ -599,6 +599,10 @@ module openconfig-bgp {
           "Reference to the address of the BGP neighbor used as
           a key in the neighbor list";
       }
+      
+      leaf nodeid{
+    	  type string;
+      }
 
       uses bgp-neighbor-group;
     }

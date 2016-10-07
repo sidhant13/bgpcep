@@ -257,7 +257,7 @@ class AbstractAddPathTest extends AbstractDataBrokerTest {
     private static void configurePeer(final Ipv4Address localAddress, final RIBImpl ribImpl, final BgpParameters bgpParameters, final PeerRole peerRole) {
         final InetAddress inetAddress = InetAddresses.forString(localAddress.getValue());
 
-        final BGPPeer bgpPeer = new BGPPeer(inetAddress.getHostAddress(), ribImpl, peerRole, null);
+        final BGPPeer bgpPeer = new BGPPeer(inetAddress.getHostAddress(), ribImpl, peerRole, null, null);
         final List<BgpParameters> tlvs = Lists.newArrayList(bgpParameters);
         StrictBGPPeerRegistry.GLOBAL.addPeer(new IpAddress(new Ipv4Address(inetAddress.getHostAddress())), bgpPeer,
             new BGPSessionPreferences(AS_NUMBER, HOLDTIMER, new BgpId(RIB_ID),

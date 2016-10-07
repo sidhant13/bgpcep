@@ -83,6 +83,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.type
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.Ipv4AddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.SubsequentAddressFamily;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.types.rev130919.UnicastSubsequentAddressFamily;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.Notification;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
@@ -122,8 +123,9 @@ public class BGPPeer implements BGPSessionListener, Peer, AutoCloseable, BGPPeer
     private final BGPPeerStats peerStats;
     private YangInstanceIdentifier peerIId;
     private final Set<AbstractRegistration> tableRegistration = new HashSet<>();
+    private final String nodeid;
 
-    public BGPPeer(final String name, final RIB rib, final PeerRole role, final SimpleRoutingPolicy peerStatus, final RpcProviderRegistry rpcRegistry) {
+    public BGPPeer(final String name, final RIB rib, final PeerRole role, final SimpleRoutingPolicy peerStatus, final RpcProviderRegistry rpcRegistry, final String nodeid) {
         this.peerRole = role;
         this.simpleRoutingPolicy = Optional.ofNullable(peerStatus);
         this.rib = Preconditions.checkNotNull(rib);
@@ -134,14 +136,15 @@ public class BGPPeer implements BGPSessionListener, Peer, AutoCloseable, BGPPeer
         // add current peer to "configured BGP peer" stats
         this.rib.getRenderStats().getConfiguredPeerCounter().increaseCount();
         this.chain = rib.createPeerChain(this);
+        this.nodeid=nodeid;
     }
 
-    public BGPPeer(final String name, final RIB rib, final PeerRole role, final RpcProviderRegistry rpcRegistry) {
-        this(name, rib, role, null, rpcRegistry);
+    public BGPPeer(final String name, final RIB rib, final PeerRole role, final RpcProviderRegistry rpcRegistry,  final String nodeid) {
+        this(name, rib, role, null, rpcRegistry, nodeid);
     }
 
     public void instantiateServiceInstance() {
-        this.ribWriter = AdjRibInWriter.create(rib.getYangRibId(), this.peerRole, this.simpleRoutingPolicy, this.chain);
+        this.ribWriter = AdjRibInWriter.create(rib.getYangRibId(), this.peerRole, this.simpleRoutingPolicy, this.chain, nodeid);
     }
 
     @Override

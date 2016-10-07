@@ -149,7 +149,7 @@ public class ParserToSalTest extends AbstractDataBrokerTest {
         rib.instantiateServiceInstance();
         assertTablesExists(tables, true);
         rib.onGlobalContextUpdated(this.schemaService.getGlobalContext());
-        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib, PeerRole.Ibgp, null);
+        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib, PeerRole.Ibgp, null, null);
         peer.instantiateServiceInstance();
         final ListenerRegistration<?> reg = this.mock.registerUpdateListener(peer);
         reg.close();
@@ -164,7 +164,7 @@ public class ParserToSalTest extends AbstractDataBrokerTest {
         rib.instantiateServiceInstance();
         rib.onGlobalContextUpdated(this.schemaService.getGlobalContext());
         assertTablesExists(tables, true);
-        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib, PeerRole.Ibgp, null);
+        final BGPPeer peer = new BGPPeer("peer-" + this.mock.toString(), rib, PeerRole.Ibgp, null, null);
         peer.instantiateServiceInstance();
         final ListenerRegistration<?> reg = this.mock.registerUpdateListener(peer);
         reg.close();

@@ -64,6 +64,7 @@
     <argument ref="globalBgpExtensions"/>
     <argument ref="BGPDispatcher"/>
     <argument ref="codecTreeFactory"/>
+    <argument ref="dataBroker"/>
     <argument ref="domDataBroker"/>
     <argument ref="schemaService"/>
   </bean>

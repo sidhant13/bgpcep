@@ -91,7 +91,7 @@ public final class BGPPeerModule extends org.opendaylight.controller.config.yang
         final BgpDeployer bgpDeployer = bgpDeployerTracker.waitForService(WaitingServiceTracker.FIVE_MINUTES);
         //map configuration to OpenConfig BGP
         final Neighbor neighbor = bgpDeployer.getMappingService().fromBgpPeer(getAddPathDependency(), getAdvertizedTableDependency(), getHoldtimer(),
-                getHost(), getInitiateConnection(), getPassword(), getPort(), getRetrytimer(), getRemoteAs(), getPeerRole(), getSimpleRoutingPolicy());
+                getHost(), getInitiateConnection(), getPassword(), getPort(), getRetrytimer(), getRemoteAs(), getPeerRole(), getSimpleRoutingPolicy(), getNodeId());
         //write to configuration DS
         final KeyedInstanceIdentifier<Protocol, ProtocolKey> protocolIId = bgpDeployer.getInstanceIdentifier().child(Protocols.class)
             .child(Protocol.class, new ProtocolKey(BGP.class, rib.getInstanceIdentifier().getKey().getId().getValue()));

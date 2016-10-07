@@ -107,6 +107,9 @@ module bgp-rib {
                 leaf peer-id {
                     type peer-id;
                 }
+                leaf node-id{
+                    type inet:uri;
+                }
                 leaf peer-role {
                     type peer-role;
                     mandatory true;

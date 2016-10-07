@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataBroker;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeChangeService;
@@ -76,17 +78,23 @@ public final class RibImpl implements RIB, AutoCloseable {
     private List<AfiSafi> afiSafi;
     private AsNumber asNumber;
     private Ipv4Address routerId;
-
     private ClusterIdentifier clusterId;
+    private DataBroker dataBroker;
 
     public RibImpl(final ClusterSingletonServiceProvider provider, final RIBExtensionConsumerContext contextProvider, final BGPDispatcher dispatcher,
-            final BindingCodecTreeFactory codecTreeFactory, final DOMDataBroker domBroker, final SchemaService schemaService) {
+            final BindingCodecTreeFactory codecTreeFactory, final DataBroker dataBroker, final DOMDataBroker domBroker, final SchemaService schemaService) {
         this.provider = Preconditions.checkNotNull(provider);
         this.extensions = contextProvider;
         this.dispatcher = dispatcher;
         this.codecTreeFactory = codecTreeFactory;
         this.domBroker = domBroker;
+        this.dataBroker= dataBroker;
         this.schemaService = schemaService;
+    }
+
+    public RibImpl(final ClusterSingletonServiceProvider provider, final RIBExtensionConsumerContext contextProvider, final BGPDispatcher dispatcher,
+            final BindingCodecTreeFactory codecTreeFactory, final DOMDataBroker domBroker, final SchemaService schemaService) {
+        this(provider, contextProvider, dispatcher,codecTreeFactory, null, domBroker, schemaService);
     }
 
     void start(final Global global, final String instanceName, final BGPOpenConfigMappingService mappingService,
@@ -236,7 +244,7 @@ public final class RibImpl implements RIB, AutoCloseable {
         final Map<TablesKey, PathSelectionMode> pathSelectionModes = mappingService.toPathSelectionMode(this.afiSafi).entrySet()
                 .stream().collect(Collectors.toMap(entry -> new TablesKey(entry.getKey().getAfi(), entry.getKey().getSafi()), Map.Entry::getValue));
         return new RIBImpl(provider, new RibId(bgpInstanceName), this.asNumber, new BgpId(this.routerId), this.clusterId,
-                this.extensions, this.dispatcher, this.codecTreeFactory, this.domBroker, mappingService.toTableTypes(this.afiSafi), pathSelectionModes,
+                this.extensions, this.dispatcher, this.codecTreeFactory, this.dataBroker, this.domBroker, mappingService.toTableTypes(this.afiSafi), pathSelectionModes,
                 this.extensions.getClassLoadingStrategy(), configurationWriter);
     }
 

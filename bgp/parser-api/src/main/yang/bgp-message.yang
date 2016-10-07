@@ -163,6 +163,17 @@ module bgp-message {
                     }
                 }
             }
+            container qos{
+                container qos-stlv{
+                    leaf type{
+                        type uint8;
+                    }
+                    leaf-list metric{
+                        type string;
+                    }
+                }
+            }
+
             list unrecognized-attributes {
                 key type;
                 leaf partial {

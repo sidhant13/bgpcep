@@ -25,6 +25,22 @@
 
         <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
             <modules xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
+
+                <module>
+                        <type xmlns:x="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">x:bgp-application-peer</type>
+                        <name>example-bgp-peer-app</name>
+                        <bgp-peer-id>127.0.1.1</bgp-peer-id>
+                        <target-rib>
+                                 <type xmlns:x="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">x:rib-instance</type>
+                                 <name>example-bgp-rib</name>
+                        </target-rib>
+                        <application-rib-id>example-app-rib</application-rib-id>
+                        <data-broker>
+                                 <type xmlns:sal="urn:opendaylight:params:xml:ns:yang:controller:md:sal:dom">sal:dom-async-data-broker</type>
+                        <name>pingpong-broker</name>
+                        </data-broker>
+                </module>
+
                 <module>
                     <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-peer-acceptor</type>
                     <name>bgp-peer-server</name>
@@ -76,14 +92,15 @@
                      Note that the peer has to have the same password configured, otherwise the
                      connection will not be established.
                      If peer role is not present, default value "ibgp" will be used (allowed values are also "ebgp" and
-                     "rr-client").
+                     "rr-client").-->
                 <module>
                     <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-peer</type>
                     <name>example-bgp-peer</name>
-                    <host>192.0.2.1</host>
+                    <host>192.168.30.1</host>
                     <holdtimer>180</holdtimer>
                     <retrytimer>10</retrytimer>
-                    <peer-role>ibgp</peer-role>
+                    <peer-role>rr-client</peer-role>
+                    <node-id>openflow:9</node-id>
                     <rib>
                         <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:rib-instance</type>
                         <name>example-bgp-rib</name>
@@ -102,65 +119,25 @@
                     </advertized-table>
                     <advertized-table>
                         <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-unicast</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
                         <name>linkstate</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-flowspec</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-flowspec</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-flowspec-l3vpn</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-flowspec-l3vpn</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-labeled-unicast</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-labeled-unicast</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-l3vpn</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-l3vpn</name>
-                    </advertized-table>
-                    <advertized-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>evpn</name>
-                    </advertized-table>
-                    <add-path>
+	    	    </advertized-table>
+		    <!--add-path>
                         <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:add-path</type>
                         <name>ipv4-unicast-both</name>
                     </add-path>
                     <add-path>
                         <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:add-path</type>
                         <name>ipv6-unicast-both</name>
-                    </add-path>
+                    </add-path-->
                 </module>
-                -->
+                
 
                 <module>
                     <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:rib-impl</type>
                     <name>example-bgp-rib</name>
                     <rib-id>example-bgp-rib</rib-id>
                     <local-as>64496</local-as>
-                    <bgp-rib-id>192.0.2.2</bgp-rib-id>
+                    <bgp-rib-id>127.0.0.1</bgp-rib-id>
                     <!-- if cluster-id is not present, it's value is the same as bgp-id -->
                     <!-- <cluster-id>192.0.2.3</cluster-id> -->
                     <local-table>
@@ -169,47 +146,7 @@
                     </local-table>
                     <local-table>
                         <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-unicast</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
                         <name>linkstate</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-flowspec</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-flowspec</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-flowspec-l3vpn</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-flowspec-l3vpn</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-labeled-unicast</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-labeled-unicast</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv4-l3vpn</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>ipv6-l3vpn</name>
-                    </local-table>
-                    <local-table>
-                        <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-table-type</type>
-                        <name>evpn</name>
                     </local-table>
                     <!--<rib-path-selection-mode>
                         <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:bgp:rib:impl">prefix:bgp-path-selection-mode</type>

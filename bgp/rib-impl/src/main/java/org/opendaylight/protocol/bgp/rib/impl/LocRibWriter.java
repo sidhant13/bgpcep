@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
+
+import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.dom.api.ClusteredDOMDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.dom.api.DOMDataTreeChangeService;
@@ -75,7 +77,9 @@ final class LocRibWriter implements AutoCloseable, ClusteredDOMDataTreeChangeLis
     private final PathSelectionMode pathSelectionMode;
     private final UnsignedInt32Counter routeCounter;
 
-    private LocRibWriter(final RIBSupportContextRegistry registry, final DOMTransactionChain chain, final YangInstanceIdentifier target,
+    private BindingTransactionChain bindingTransactionChain;
+
+    private LocRibWriter(final RIBSupportContextRegistry registry, final DOMTransactionChain chain, final BindingTransactionChain bindingTransactionChain, final YangInstanceIdentifier target,
         final Long ourAs, final DOMDataTreeChangeService service, final ExportPolicyPeerTracker exportPolicyPeerTracker, final TablesKey tablesKey,
         @Nonnull final PathSelectionMode pathSelectionMode, final UnsignedInt32Counter routeCounter) {
         this.chain = Preconditions.checkNotNull(chain);
@@ -88,7 +92,8 @@ final class LocRibWriter implements AutoCloseable, ClusteredDOMDataTreeChangeLis
         this.exportPolicyPeerTracker = exportPolicyPeerTracker;
         this.pathSelectionMode = pathSelectionMode;
         this.routeCounter = routeCounter;
-
+        this.bindingTransactionChain= bindingTransactionChain;
+        
         final DOMDataWriteTransaction tx = this.chain.newWriteOnlyTransaction();
         tx.merge(LogicalDatastoreType.OPERATIONAL, this.locRibTarget.node(Routes.QNAME), this.ribSupport.emptyRoutes());
         tx.merge(LogicalDatastoreType.OPERATIONAL, this.locRibTarget.node(Attributes.QNAME).node(ATTRIBUTES_UPTODATE_TRUE.getNodeType()), ATTRIBUTES_UPTODATE_TRUE);
@@ -100,9 +105,9 @@ final class LocRibWriter implements AutoCloseable, ClusteredDOMDataTreeChangeLis
     }
 
     public static LocRibWriter create(@Nonnull final RIBSupportContextRegistry registry, @Nonnull final TablesKey tablesKey, @Nonnull final DOMTransactionChain chain,
-        @Nonnull final YangInstanceIdentifier target, @Nonnull final AsNumber ourAs, @Nonnull final DOMDataTreeChangeService service, @Nonnull final ExportPolicyPeerTracker ep,
+        BindingTransactionChain bindingTransactionChain, @Nonnull final YangInstanceIdentifier target, @Nonnull final AsNumber ourAs, @Nonnull final DOMDataTreeChangeService service, @Nonnull final ExportPolicyPeerTracker ep,
         @Nonnull final PathSelectionMode pathSelectionStrategy, @Nonnull final UnsignedInt32Counter routeCounter) {
-        return new LocRibWriter(registry, chain, target, ourAs.getValue(), service, ep, tablesKey, pathSelectionStrategy, routeCounter);
+        return new LocRibWriter(registry, chain, bindingTransactionChain, target, ourAs.getValue(), service, ep, tablesKey, pathSelectionStrategy, routeCounter);
     }
 
     @Override

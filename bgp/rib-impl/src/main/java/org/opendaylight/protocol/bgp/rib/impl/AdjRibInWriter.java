@@ -41,6 +41,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.Tables;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.TablesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.rib.tables.Attributes;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier;
 import org.opendaylight.yangtools.yang.data.api.YangInstanceIdentifier.InstanceIdentifierBuilder;
@@ -70,11 +71,13 @@ final class AdjRibInWriter {
     @VisibleForTesting
     static final QName PEER_ID_QNAME = QName.create(Peer.QNAME, "peer-id").intern();
     private static final QName PEER_ROLE_QNAME = QName.create(Peer.QNAME, "peer-role").intern();
+    private static final QName PEER_NODEID_QNAME = QName.create(Peer.QNAME, "node-id").intern();
     private static final NodeIdentifier ADJRIBIN = new NodeIdentifier(AdjRibIn.QNAME);
     private static final NodeIdentifier ADJRIBOUT = new NodeIdentifier(AdjRibOut.QNAME);
     private static final NodeIdentifier EFFRIBIN = new NodeIdentifier(EffectiveRibIn.QNAME);
     private static final NodeIdentifier PEER_ID = new NodeIdentifier(PEER_ID_QNAME);
     private static final NodeIdentifier PEER_ROLE = new NodeIdentifier(PEER_ROLE_QNAME);
+    private static final NodeIdentifier PEER_NODEID = new NodeIdentifier(PEER_NODEID_QNAME);
     private static final NodeIdentifier PEER_TABLES = new NodeIdentifier(SupportedTables.QNAME);
     private static final NodeIdentifier TABLES = new NodeIdentifier(Tables.QNAME);
     private static final QName SEND_RECEIVE = QName.create(SupportedTables.QNAME, "send-receive").intern();
@@ -91,15 +94,20 @@ final class AdjRibInWriter {
     private final DOMTransactionChain chain;
     private final PeerRole role;
     private final Optional<SimpleRoutingPolicy> simpleRoutingPolicy;
+	private final Optional<NodeId> maybeNodeid;
 
     private AdjRibInWriter(final YangInstanceIdentifier ribPath, final DOMTransactionChain chain, final PeerRole role,
-        final Optional<SimpleRoutingPolicy> simpleRoutingPolicy, final YangInstanceIdentifier peerPath, final Map<TablesKey, TableContext> tables) {
+        final Optional<SimpleRoutingPolicy> simpleRoutingPolicy, final YangInstanceIdentifier peerPath, final Map<TablesKey, TableContext> tables, String nodeId)  {
         this.ribPath = Preconditions.checkNotNull(ribPath);
         this.chain = Preconditions.checkNotNull(chain);
         this.tables = Preconditions.checkNotNull(tables);
         this.role = Preconditions.checkNotNull(role);
         this.simpleRoutingPolicy = simpleRoutingPolicy;
         this.peerPath = peerPath;
+        if(nodeId!=null)
+            this.maybeNodeid= Optional.of(new NodeId(nodeId));
+        else
+            this.maybeNodeid= Optional.empty();
     }
 
     /**
@@ -111,7 +119,12 @@ final class AdjRibInWriter {
      */
     static AdjRibInWriter create(@Nonnull final YangInstanceIdentifier ribId, @Nonnull final PeerRole role, final Optional<SimpleRoutingPolicy> simpleRoutingPolicy,
         @Nonnull final DOMTransactionChain chain) {
-        return new AdjRibInWriter(ribId, chain, role, simpleRoutingPolicy, null, Collections.emptyMap());
+        return new AdjRibInWriter(ribId, chain, role, simpleRoutingPolicy, null, Collections.emptyMap(), null);
+    }
+
+    static AdjRibInWriter create(@Nonnull final YangInstanceIdentifier ribId, @Nonnull final PeerRole role, final Optional<SimpleRoutingPolicy> simpleRoutingPolicy,
+        @Nonnull final DOMTransactionChain chain, String nodeId) {
+        return new AdjRibInWriter(ribId, chain, role, simpleRoutingPolicy, null, Collections.emptyMap(), nodeId);
     }
 
     /**
@@ -134,7 +147,7 @@ final class AdjRibInWriter {
         final ImmutableMap<TablesKey, TableContext> tb = createNewTableInstances(newPeerPath, registry, tableTypes, addPathTablesType, tx);
         tx.submit();
 
-        return new AdjRibInWriter(this.ribPath, this.chain, this.role, this.simpleRoutingPolicy, newPeerPath, tb);
+        return new AdjRibInWriter(this.ribPath, this.chain, this.role, this.simpleRoutingPolicy, newPeerPath, tb,  null);
     }
 
     /**
@@ -214,6 +227,8 @@ final class AdjRibInWriter {
         if (this.simpleRoutingPolicy.isPresent() && this.role != PeerRole.Internal) {
             pb.withChild(ImmutableNodes.leafNode(SIMPLE_ROUTING_POLICY_NID, simpleRoutingPolicyString(this.simpleRoutingPolicy.get())));
         }
+		if(maybeNodeid.isPresent())
+            pb.withChild(ImmutableNodes.leafNode(PEER_NODEID, maybeNodeid.get().getValue()));
         pb.withChild(ImmutableMapNodeBuilder.create().withNodeIdentifier(PEER_TABLES).build());
         pb.withChild(EMPTY_ADJRIBIN);
         if(!isLearnNone(this.simpleRoutingPolicy)) {

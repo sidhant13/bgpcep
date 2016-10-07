@@ -22,11 +22,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -57,6 +62,7 @@ import org.opendaylight.protocol.bgp.rib.spi.ExportPolicyPeerTracker;
 import org.opendaylight.protocol.bgp.rib.spi.RIBExtensionConsumerContext;
 import org.opendaylight.protocol.bgp.rib.spi.RibSupportUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.AsNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.multiprotocol.rev130919.BgpTableType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.BgpRib;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.bgp.rib.rev130925.RibId;
@@ -98,6 +104,7 @@ public final class RIBImpl extends DefaultRibReference implements ClusterSinglet
     private final BgpId bgpIdentifier;
     private final Set<BgpTableType> localTables;
     private final Set<TablesKey> localTablesKeys;
+    private final DataBroker dataBroker;
     private final DOMDataBroker domDataBroker;
     private final RIBExtensionConsumerContext extensions;
     private final YangInstanceIdentifier yangRibId;
@@ -119,7 +126,7 @@ public final class RIBImpl extends DefaultRibReference implements ClusterSinglet
 
     public RIBImpl(final ClusterSingletonServiceProvider provider, final RibId ribId, final AsNumber localAs, final BgpId localBgpId,
         final ClusterIdentifier clusterId, final RIBExtensionConsumerContext extensions, final BGPDispatcher dispatcher,
-        final BindingCodecTreeFactory codecFactory, final DOMDataBroker domDataBroker, final List<BgpTableType> localTables,
+        final BindingCodecTreeFactory codecFactory,final DataBroker dps, final DOMDataBroker domDataBroker, final List<BgpTableType> localTables,
         @Nonnull final Map<TablesKey, PathSelectionMode> bestPathSelectionStrategies, final GeneratedClassLoadingStrategy classStrategy,
         final BGPConfigModuleTracker moduleTracker, final BGPOpenConfigProvider openConfigProvider,
         final BgpDeployer.WriteConfiguration configurationWriter) {
@@ -131,6 +138,7 @@ public final class RIBImpl extends DefaultRibReference implements ClusterSinglet
         this.dispatcher = Preconditions.checkNotNull(dispatcher);
         this.localTables = ImmutableSet.copyOf(localTables);
         this.localTablesKeys = new HashSet<>();
+        this.dataBroker = dps;
         this.domDataBroker = Preconditions.checkNotNull(domDataBroker);
         this.service = this.domDataBroker.getSupportedExtensions().get(DOMDataTreeChangeService.class);
         this.extensions = Preconditions.checkNotNull(extensions);
@@ -166,11 +174,19 @@ public final class RIBImpl extends DefaultRibReference implements ClusterSinglet
 
     public RIBImpl(final ClusterSingletonServiceProvider provider, final RibId ribId, final AsNumber localAs, final BgpId localBgpId, @Nullable final ClusterIdentifier clusterId,
         final RIBExtensionConsumerContext extensions, final BGPDispatcher dispatcher, final BindingCodecTreeFactory codecFactory,
-        final DOMDataBroker domDataBroker, final List<BgpTableType> localTables, final Map<TablesKey, PathSelectionMode> bestPathSelectionstrategies,
+        final DataBroker dps,final DOMDataBroker domDataBroker, final List<BgpTableType> localTables, final Map<TablesKey, PathSelectionMode> bestPathSelectionstrategies,
         final GeneratedClassLoadingStrategy classStrategy, final BgpDeployer.WriteConfiguration configurationWriter) {
         this(provider, ribId, localAs, localBgpId, clusterId, extensions, dispatcher, codecFactory,
-            domDataBroker, localTables, bestPathSelectionstrategies, classStrategy, null, null, configurationWriter);
+            dps, domDataBroker, localTables, bestPathSelectionstrategies, classStrategy, null, null, configurationWriter);
     }
+
+    public RIBImpl(final ClusterSingletonServiceProvider provider, final RibId ribId, final AsNumber localAs, final BgpId localBgpId, @Nullable final ClusterIdentifier clusterId,
+            final RIBExtensionConsumerContext extensions, final BGPDispatcher dispatcher, final BindingCodecTreeFactory codecFactory,
+            final DOMDataBroker domDataBroker, final List<BgpTableType> localTables, final Map<TablesKey, PathSelectionMode> bestPathSelectionstrategies,
+            final GeneratedClassLoadingStrategy classStrategy, final BgpDeployer.WriteConfiguration configurationWriter) {
+            this(provider, ribId, localAs, localBgpId, clusterId, extensions, dispatcher, codecFactory,
+                null, domDataBroker, localTables, bestPathSelectionstrategies, classStrategy, null, null, configurationWriter);
+        }
 
     private void startLocRib(final TablesKey key) {
         LOG.debug("Creating LocRib table for {}", key);
@@ -203,7 +219,7 @@ public final class RIBImpl extends DefaultRibReference implements ClusterSinglet
             pathSelectionStrategy = BasePathSelectionModeFactory.createBestPathSelectionStrategy();
         }
 
-        this.locRibs.add(LocRibWriter.create(this.ribContextRegistry, key, createPeerChain(this), getYangRibId(), this.localAs, getService(),
+        this.locRibs.add(LocRibWriter.create(this.ribContextRegistry, key, createPeerChain(this), dataBroker.createTransactionChain(this), getYangRibId(), this.localAs, getService(),
             this.exportPolicyPeerTrackerMap.get(key), pathSelectionStrategy, this.renderStats.getLocRibRouteCounter().init(key)));
     }
 

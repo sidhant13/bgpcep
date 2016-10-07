@@ -23,6 +23,7 @@ module odl-bgp-rib-impl-cfg {
     import bgp-peer { prefix peer; revision-date 2016-06-06; }
     import bgp-stats-peer { prefix peer-stats; revision-date 2016-06-06; }
     import bgp-stats-rib-impl { prefix rib-impl-stats; revision-date 2016-06-06; }
+    import network-topology {prefix "topo"; revision-date "2013-10-21"; }
 
     organization "Cisco Systems, Inc.";
 
@@ -275,6 +276,11 @@ module odl-bgp-rib-impl-cfg {
                         config:required-identity bgp-table-type;
                     }
                 }
+            }
+            
+            leaf node-id{
+                type string;
+                mandatory false;
             }
 
             list add-path {

@@ -194,7 +194,7 @@ public class BGPOpenConfigMappingServiceImplTest {
 
     @Test
     public void fromBgpPeer() {
-        final Neighbor result = OPENCONFIG.fromBgpPeer(FAMILIES, TABLE_TYPES, 30, IPADDRESS, true, null, PORT_NUMBER, 30, AS, PeerRole.Ibgp, null);
+        final Neighbor result = OPENCONFIG.fromBgpPeer(FAMILIES, TABLE_TYPES, 30, IPADDRESS, true, null, PORT_NUMBER, 30, AS, PeerRole.Ibgp, null, null);
         final List<AfiSafi> afisafis = new ArrayList<>();
         afisafis.add(new AfiSafiBuilder().setAfiSafiName(IPV4UNICAST.class)
             .addAugmentation(AfiSafi1.class, new AfiSafi1Builder().setReceive(true).setSendMax(Shorts.checkedCast(ALL_PATHS)).build()).build());

@@ -157,10 +157,11 @@ public final class BGPOpenConfigMappingServiceImpl implements BGPOpenConfigMappi
     public Neighbor fromBgpPeer(final List<AddressFamilies> addPathCapabilities,
             final List<BgpTableType> advertisedTables, final Integer holdTimer, final IpAddress ipAddress,
             final Boolean isActive, final Rfc2385Key password, final PortNumber portNumber, final Integer retryTimer,
-            final AsNumber remoteAs, final PeerRole peerRole, final SimpleRoutingPolicy simpleRoutingPolicy) {
+            final AsNumber remoteAs, final PeerRole peerRole, final SimpleRoutingPolicy simpleRoutingPolicy, String nodeid) {
         final NeighborBuilder neighborBuilder = new NeighborBuilder();
         neighborBuilder.setNeighborAddress(ipAddress);
         neighborBuilder.setKey(new NeighborKey(ipAddress));
+        neighborBuilder.setNodeid(nodeid);
         neighborBuilder.setAfiSafis(new org.opendaylight.yang.gen.v1.http.openconfig.net.yang.bgp.rev151009.bgp.neighbor.group.AfiSafisBuilder().setAfiSafi(OpenConfigUtil.toAfiSafis(advertisedTables,
                 (afiSafi, tableType) -> OpenConfigUtil.toNeighborAfiSafiAddPath(afiSafi, tableType, addPathCapabilities))).build());
         neighborBuilder.setTransport(new TransportBuilder().setConfig(
